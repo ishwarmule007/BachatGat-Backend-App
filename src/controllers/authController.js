@@ -3,6 +3,8 @@ const User = require('../models/User');
 const OTP = require('../models/otpModel');
 const sendSMS = require('../utils/sendSMS');
 const generateToken = require("../utils/generateToken");
+const jwt = require("jsonwebtoken");
+
 
 exports.passwordlogin = async(req, res) => {
     try {
@@ -93,29 +95,104 @@ exports.sendOTP = async(req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+
 exports.verifyOTP = async(req, res) => {
     try {
-        const { mobileNumber, otp } = req.body;
+        const { mobileNumber, otp, purpose } = req.body;
 
+        if (!mobileNumber || !otp || !purpose) {
+            return res.status(400).json({
+                message: "mobileNumber, otp and purpose are required"
+            });
+        }
         const otpRecord = await OTP.findOne({ mobileNumber, otp });
-
         if (!otpRecord) {
-            return res.status(400).json({ message: "Invalid OTP" });
+            return res.status(400).json({
+                message: "Invalid OTP"
+            });
         }
-
         if (otpRecord.expiresAt < new Date()) {
-            return res.status(400).json({ message: "OTP has expired" });
+            return res.status(400).json({
+                message: "OTP has expired"
+            });
         }
-
         const user = await User.findOne({ mobileNumber });
-
-        const token = generateToken(user._id);
-
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
         await OTP.deleteOne({ _id: otpRecord._id });
-
-        res.status(200).json({ message: "OTP verified successfully", token });
-
+        if (purpose === "login") {
+            const token = generateToken(
+                user._id,
+                user.roleSelection
+            );
+            return res.status(200).json({
+                success: true,
+                message: "Login successful",
+                token,
+                user
+            });
+        }
+        if (purpose === "forgotPassword") {
+            const resetToken = jwt.sign({
+                    id: user._id,
+                    purpose: "resetPassword"
+                },
+                process.env.JWT_SECRET, { expiresIn: "10m" }
+            );
+            return res.status(200).json({
+                success: true,
+                message: "OTP verified successfully",
+                resetToken
+            });
+        }
+        return res.status(400).json({
+            message: "Invalid purpose"
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({
+            message: error.message
+        });
+    }
+};
+exports.forgetPassword = async(req, res) => {
+    try {
+
+        const { resetToken, newPassword, confirmPassword } = req.body;
+        if (!resetToken || !newPassword || !confirmPassword) {
+            return res.status(400).json({
+                message: "resetToken, newPassword and confirmPassword are required"
+            });
+        }
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({
+                message: "Passwords do not match"
+            });
+        }
+        const decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+        if (decoded.purpose !== "resetPassword") {
+            return res.status(400).json({
+                message: "Invalid reset token"
+            });
+        }
+        const user = await User.findById(decoded.id);
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+        const hashPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashPassword;
+        await user.save();
+        res.status(200).json({
+            message: "Password reset successful"
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message
+        });
     }
 };
