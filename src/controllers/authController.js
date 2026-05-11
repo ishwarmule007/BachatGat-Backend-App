@@ -93,8 +93,6 @@ exports.sendOTP = async(req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-
-
 exports.verifyOTP = async(req, res) => {
     try {
         const { mobileNumber, otp } = req.body;
