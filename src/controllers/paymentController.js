@@ -134,7 +134,7 @@ exports.getMemberPaymentPage = async(req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-exports.getMemberPaymentPage = async (req, res) => {
+exports.getMemberPaymentHistory = async (req, res) => {
      try {
         const userId = req.user._id;
 

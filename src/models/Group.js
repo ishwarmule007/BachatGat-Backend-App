@@ -42,7 +42,6 @@ const groupSchema = new mongoose.Schema({
         },
         monthlyContribution: {
             type: Number,
-            required: true,
             min: 0
         },
 
