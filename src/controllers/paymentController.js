@@ -134,3 +134,22 @@ exports.getMemberPaymentPage = async(req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+exports.getMemberPaymentPage = async (req, res) => {
+     try {
+        const userId = req.user._id;
+
+        const payments = await PaymentRequest.find({ userId })
+            .populate("groupId", "groupName groupCode")
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            message: "Payment history fetched successfully",
+            payments,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+        });
+    }
+};

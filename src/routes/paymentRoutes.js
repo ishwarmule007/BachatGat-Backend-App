@@ -6,6 +6,8 @@ const adminMiddleware = require("../middlewares/adminMiddleware");
 
 const {
     updatePaymentRequestStatus,
+    getMemberPaymentPage,
+    getMemberPaymentHistory
 } = require("../controllers/paymentController");
 const {
     createPaymentRequest
@@ -18,12 +20,15 @@ router.post(
     authMiddleware,
     createPaymentRequest
 );
-
-router.put(
-    "/admin/update-status",
+router.get(
+    "/member/:groupCode",
     authMiddleware,
-    adminMiddleware,
-    updatePaymentRequestStatus
+    getMemberPaymentPage
+);
+router.get(
+    "/member/history",
+    authMiddleware,
+    getMemberPaymentHistory
 );
 
 router.get(
