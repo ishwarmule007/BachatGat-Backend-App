@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const generateToken = require('../utils/generateToken');
 const Loan = require('../models/Loan');
 const Contribution = require('../models/contribution');
+const PaymentRequest = require('../models/PaymentRequest');
 const geocodeAddress = require("../utils/geocodeAddress");
 const sendSMS = require("../utils/sendSMS");
 
@@ -239,11 +240,12 @@ const addMember = async(req, res) => {
             fullName,
             mobileNumber,
             dateOfBirth,
-            address
+            address,
+            monthlyContributionAmount
         } = req.body;
-        if (!groupCode || !fullName || !mobileNumber || !dateOfBirth || !address) {
+        if (!groupCode || !fullName || !mobileNumber || !dateOfBirth || !address || !monthlyContributionAmount) {
             return res.status(400).json({
-                message: "groupCode, fullName, mobileNumber, dateOfBirth and address are required"
+                message: "groupCode, fullName, mobileNumber, dateOfBirth, address and monthlyContributionAmount are required"
             });
         }
         const group = await Group.findOne({ groupCode });
@@ -298,6 +300,7 @@ const addMember = async(req, res) => {
         }
         group.members.push({
             userId: user._id,
+            monthlyContribution: monthlyContributionAmount,
             roleInGroup: "member",
             status: "pending"
         });
@@ -662,6 +665,77 @@ const getAdminMemberProfile = async(req, res) => {
         });
     }
 };
+const getAdminPaymentDashboard = async(req, res) => {
+    try {
+        const adminId = req.user._id;
+
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}`;
+
+        const groups = await Group.find({ adminId });
+
+        let totalReceivableThisMonth = 0;
+
+        groups.forEach((group) => {
+            group.members.forEach((member) => {
+                if (member.status === "approved") {
+                    totalReceivableThisMonth += member.monthlyContributionAmount || 0;
+                }
+            });
+        });
+
+        const receivedThisMonth = await Contribution.aggregate([{
+                $match: {
+                    groupId: { $in: groups.map((g) => g._id) },
+                    month: currentMonth,
+                    status: "paid",
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: "$amount" },
+                    count: { $sum: 1 },
+                },
+            },
+        ]);
+
+        const pendingRequests = await PaymentRequest.find({
+                adminId,
+                status: "pending",
+            })
+            .populate("userId", "fullName mobileNumber")
+            .populate("groupId", "groupName groupCode")
+            .sort({ createdAt: -1 });
+
+        const pendingAmount = pendingRequests.reduce(
+            (sum, p) => sum + p.amount,
+            0
+        );
+
+        res.status(200).json({
+            message: "Admin payment dashboard fetched successfully",
+            currentMonth,
+
+            totalReceivableThisMonth,
+            totalReceivedThisMonth: receivedThisMonth[0] ? .total || 0,
+            remainingReceivableThisMonth: totalReceivableThisMonth - (receivedThisMonth[0] ? .total || 0),
+
+            totalTransactionsThisMonth: receivedThisMonth[0] ? .count || 0,
+
+            pendingPaymentRequests: pendingRequests.length,
+            pendingAmount,
+
+            pendingRequests,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+        });
+    }
+};
 module.exports = {
     registerAdmin,
     addMember,
@@ -673,5 +747,6 @@ module.exports = {
     getAdminProfile,
     updatePaymentDetails,
     getGroupMemebers,
-    getAdminMemberProfile
+    getAdminMemberProfile,
+    getAdminPaymentDashboard
 };

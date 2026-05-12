@@ -1,0 +1,46 @@
+const mongoose = require("mongoose");
+
+const paymentRequestSchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
+    groupId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Group",
+        required: true
+    },
+    amount: {
+        type: Number,
+        required: true
+    },
+    month: {
+        type: String,
+        required: true
+    },
+    upiId: {
+        type: String,
+        required: true
+    },
+    status: {
+        type: String,
+        enum: ["pending", "accepted", "rejected"],
+        default: "pending"
+    },
+    screenshotUrl: {
+        type: String,
+        required: true,
+    },
+
+    extractedInfo: {
+        extractedAmount: Number,
+        transactionId: String,
+        paidTo: String,
+        paidFrom: String,
+        transactionDate: Date,
+    },
+    acceptedAt: Date,
+    rejectedAt: Date,
+}, { timestamps: true });
+module.exports = mongoose.model("PaymentRequest", paymentRequestSchema);
