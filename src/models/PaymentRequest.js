@@ -11,6 +11,11 @@ const paymentRequestSchema = new mongoose.Schema({
         ref: "Group",
         required: true
     },
+    adminId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
     amount: {
         type: Number,
         required: true
@@ -42,5 +47,8 @@ const paymentRequestSchema = new mongoose.Schema({
     },
     acceptedAt: Date,
     rejectedAt: Date,
+    rejectionReason: {
+        type: String
+    },
 }, { timestamps: true });
 module.exports = mongoose.model("PaymentRequest", paymentRequestSchema);
