@@ -715,17 +715,23 @@ const getAdminPaymentDashboard = async(req, res) => {
             0
         );
 
+        const receivedTotal = receivedThisMonth[0] ? receivedThisMonth[0].total || 0 : 0;
+        const receivedCount = receivedThisMonth[0] ? receivedThisMonth[0].count || 0 : 0;
+
         res.status(200).json({
             message: "Admin payment dashboard fetched successfully",
             currentMonth,
 
             totalReceivableThisMonth,
-            totalReceivedThisMonth: receivedThisMonth[0] ? .total || 0,
-            remainingReceivableThisMonth: totalReceivableThisMonth - (receivedThisMonth[0] ? .total || 0),
 
-            totalTransactionsThisMonth: receivedThisMonth[0] ? .count || 0,
+            totalReceivedThisMonth: receivedTotal,
+
+            remainingReceivableThisMonth: totalReceivableThisMonth - receivedTotal,
+
+            totalTransactionsThisMonth: receivedCount,
 
             pendingPaymentRequests: pendingRequests.length,
+
             pendingAmount,
 
             pendingRequests,

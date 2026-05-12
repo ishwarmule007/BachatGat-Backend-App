@@ -6,7 +6,7 @@ const generateToken = require("../utils/generateToken");
 const jwt = require("jsonwebtoken");
 
 
-exports.passwordlogin = async(req, res) => {
+const passwordlogin = async(req, res) => {
     try {
         const { mobileNumber, password } = req.body;
 
@@ -52,7 +52,7 @@ exports.passwordlogin = async(req, res) => {
         });
     }
 };
-exports.sendOTP = async(req, res) => {
+const sendOTP = async(req, res) => {
     try {
         const { mobileNumber } = req.body;
         const user = await User.findOne({ mobileNumber });
@@ -97,7 +97,7 @@ exports.sendOTP = async(req, res) => {
 };
 
 
-exports.verifyOTP = async(req, res) => {
+const verifyOTP = async(req, res) => {
     try {
         const { mobileNumber, otp, purpose } = req.body;
 
@@ -158,7 +158,7 @@ exports.verifyOTP = async(req, res) => {
         });
     }
 };
-exports.forgetPassword = async(req, res) => {
+const forgetPassword = async(req, res) => {
     try {
 
         const { resetToken, newPassword, confirmPassword } = req.body;
@@ -196,3 +196,9 @@ exports.forgetPassword = async(req, res) => {
         });
     }
 };
+module.exports = {
+    passwordlogin,
+    sendOTP,
+    verifyOTP,
+    forgetPassword
+}

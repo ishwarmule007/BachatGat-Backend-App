@@ -5,7 +5,6 @@ const authMiddleware = require("../middlewares/authMiddleware");
 const {
     isAdmin
 } = require('../middlewares/adminMiddleware');
-const { makeContribution, getGroupContributions } = require('../controllers/contibutionController');
 const {
     requestLoan,
     getLoanRequests,
@@ -16,8 +15,6 @@ router.post('/send-otp', sendOTP);
 router.post('/verify-otp', verifyOTP);
 router.post('/password-login', passwordlogin);
 router.post('/forget-password', forgetPassword);
-router.get('/member-dashboard', authMiddleware, makeContribution);
-router.get('/get-group-contributions', authMiddleware, getGroupContributions);
 router.post('/request-loan', authMiddleware, requestLoan);
 router.get('/loan-requests', authMiddleware, getLoanRequests);
 router.put('/update-loan-status', authMiddleware, updateLoanStatus);

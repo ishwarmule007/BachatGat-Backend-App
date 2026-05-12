@@ -5,18 +5,21 @@ const authMiddleware = require("../middlewares/authMiddleware");
 const adminMiddleware = require("../middlewares/adminMiddleware");
 
 const {
-    createPaymentRequest,
     updatePaymentRequestStatus,
-    getAdminPaymentDashboard,
 } = require("../controllers/paymentController");
-
+const {
+    createPaymentRequest
+} = require("../controllers/contibutionController");
+const {
+    getAdminPaymentDashboard
+} = require("../controllers/adminController");
 router.post(
     "/request",
     authMiddleware,
     createPaymentRequest
 );
 
-router.patch(
+router.put(
     "/admin/update-status",
     authMiddleware,
     adminMiddleware,
