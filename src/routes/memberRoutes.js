@@ -4,7 +4,8 @@ const {
     getMemberGroupRequests,
     acceptGroupRequest,
     rejectGroupRequest,
-    getMemberHomeDashboard
+    getMemberHomeDashboard,
+    getMemberProfile
 } = require("../controllers/memberController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -32,5 +33,9 @@ router.post(
     authMiddleware,
     rejectGroupRequest
 );
-
+router.get(
+    "/profile",
+    authMiddleware,
+    getMemberProfile
+);
 module.exports = router;

@@ -269,9 +269,84 @@ const getMemberHomeDashboard = async(req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+const getMemberProfile = async(req, res) => {
+    try {
+        const userId = req.user._id || req.user.id;
+
+        const user = await User.findById(userId).select(
+            "fullName mobileNumber address dateofBirth  groupIds"
+        );
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
+        const activeGroup = await Group.findOne({
+            "members.userId": userId,
+            "members.status": "approved"
+        }).select("groupName members");
+
+        const memberData = activeGroup ? activeGroup.members ? activeGroup.members.find(
+            (member) => member.userId.toString() === userId.toString()
+        ) : null : null;
+
+        const loanSummary = await Loan.aggregate([{
+                $match: {
+                    userId: user._id
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    loanTaken: { $sum: "$loanAmount" },
+                    loanPaid: { $sum: "$paidAmount" }
+                }
+            }
+        ]);
+
+        const loanTaken = loanSummary[0] ? loanSummary[0].loanTaken || 0 : 0;
+        const loanPaid = loanSummary[0] ? loanSummary[0].loanPaid || 0 : 0;
+        const remainingToPay = loanTaken - loanPaid;
+
+        res.status(200).json({
+            message: "Member profile fetched successfully",
+            profile: {
+                name: user.fullName,
+                status: memberData ? memberData.status : null,
+                memberId: memberData ? memberData.membershipId || null : null
+            },
+
+
+            personalInformation: {
+                memberName: user.fullName,
+                mobileNumber: user.mobileNumber,
+                address: user.address || null,
+                dateOfBirth: user.dateofBirth
+            },
+
+            loanSummary: {
+                loanTaken,
+                loanPaid,
+                remainingToPay,
+                status: remainingToPay > 0 ?
+                    "Keep going! You're doing great." : "No pending loan"
+            },
+
+            memberSince: memberData ? memberData.joinedAt || user.createdAt : null
+
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message
+        });
+    }
+};
 module.exports = {
     getMemberGroupRequests,
     acceptGroupRequest,
     rejectGroupRequest,
-    getMemberHomeDashboard
+    getMemberHomeDashboard,
+    getMemberProfile
 };
