@@ -1,6 +1,6 @@
 const PaymentRequest = require("../models/PaymentRequest");
 const Contribution = require("../models/contribution");
-const { createNotification } = require("../utils/notificationHelper");
+const { createNotification } = require("../utils/createNotification");
 exports.updatePaymentRequestStatus = async(req, res) => {
     try {
         const { paymentRequestId, status } = req.body;

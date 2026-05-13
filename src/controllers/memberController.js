@@ -1,7 +1,7 @@
 const Group = require("../models/Group");
 const User = require("../models/User");
 const Contribution = require("../models/Contribution");
-const { createManyNotifications } = require("../utils/notificationHelper");
+const { createManyNotifications } = require("../utils/createNotification");
 const getMemberGroupRequests = async(req, res) => {
     try {
         const userId = req.user._id;

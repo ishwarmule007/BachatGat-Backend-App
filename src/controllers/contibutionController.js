@@ -2,7 +2,7 @@ const PaymentRequest = require("../models/PaymentRequest");
 const Contribution = require("../models/contribution");
 const Group = require("../models/Group");
 const User = require("../models/User");
-const { createNotification } = require("../utils/notificationHelper");
+const { createNotification } = require("../utils/createNotification");
 exports.createPaymentRequest = async(req, res) => {
     try {
         const {
