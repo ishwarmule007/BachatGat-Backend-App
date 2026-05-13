@@ -4,13 +4,9 @@ const {
     registerAdmin,
     addMember,
     getAdminDashboardOverview,
-    getAdminGroups,
-    getGroupDetails,
-    getGroupMembers,
     createGroup,
     getAdminProfile,
     updatePaymentDetails,
-    getGroupMemebers,
     getAdminMemberProfile
 } = require("../controllers/adminController");
 
@@ -35,12 +31,6 @@ router.put(
     updatePaymentDetails
 );
 router.get(
-    "/groups/:groupCode/members",
-    authMiddleware,
-    adminMiddleware,
-    getGroupMemebers
-);
-router.get(
     "/dashboard-overview",
     authMiddleware,
     adminMiddleware,
@@ -53,26 +43,7 @@ router.post(
     createGroup
 );
 
-router.get(
-    "/groups",
-    authMiddleware,
-    adminMiddleware,
-    getAdminGroups
-);
 
-router.get(
-    "/groups/:groupCode",
-    authMiddleware,
-    adminMiddleware,
-    getGroupDetails
-);
-
-router.get(
-    "/groups/:groupCode/members",
-    authMiddleware,
-    adminMiddleware,
-    getGroupMembers
-);
 
 router.post(
     "/add-member",

@@ -325,146 +325,6 @@ const addMember = async(req, res) => {
         });
     }
 };
-const getAdminGroups = async(req, res) => {
-    try {
-        const adminId = req.user._id;
-
-        const groups = await Group.find({
-            $or: [
-                { adminId: adminId },
-                { "members.userId": adminId }
-            ]
-        }).sort({ createdAt: -1 });
-
-        const formattedGroups = groups.map((group) => {
-            const approvedMembers = group.members.filter(
-                (member) => member.status === "approved"
-            );
-            return {
-                groupId: group._id,
-                groupName: group.groupName,
-                groupCode: group.groupCode,
-                totalMembers: approvedMembers.length,
-                totalSaving: group.totalSaving || 0,
-                formationDate: group.formationDate,
-                location: group.location
-            };
-        });
-        res.status(200).json({
-            message: "Admin groups fetched successfully",
-            groups: formattedGroups
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: "Failed to fetch admin groups",
-            error: error.message
-        });
-    }
-};
-const getGroupDetails = async(req, res) => {
-    try {
-        const { groupCode } = req.params;
-        const group = await Group.findOne({ groupCode }).populate(
-            "members.userId",
-            "fullName mobileNumber gender role"
-        );
-        if (!group) {
-            return res.status(404).json({
-                message: "Group not found"
-            });
-        }
-        const approvedMembers = group.members.filter(
-            (member) => member.status === "approved"
-        );
-        const pendingMembers = group.members.filter(
-            (member) => member.status === "pending"
-        );
-        const rejectedMembers = group.members.filter(
-            (member) => member.status === "rejected"
-        );
-        res.status(200).json({
-            message: "Group details fetched successfully",
-            group: {
-                groupId: group._id,
-                groupName: group.groupName,
-                groupCode: group.groupCode,
-                description: group.description,
-                formationDate: group.formationDate,
-                totalSaving: group.totalSaving || 0,
-                totalLoanGiven: group.totalLoanGiven || 0,
-                totalMembers: approvedMembers.length,
-                pendingMembers: pendingMembers.length,
-                rejectedMembers: rejectedMembers.length,
-                village: group.village,
-                taluka: group.taluka,
-                district: group.district,
-                state: group.state,
-                location: {
-                    address: group.location ? group.location.address : null,
-                    latitude: group.location ? group.location.latitude : null,
-                    longitude: group.location ? group.location.longitude : null
-                },
-                audioCall: true,
-                videoCall: true
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: "Failed to fetch group details",
-            error: error.message
-        });
-    }
-};
-const getGroupMembers = async(req, res) => {
-    try {
-        const { groupCode } = req.params;
-        const group = await Group.findOne({ groupCode }).populate(
-            "members.userId",
-            "fullName mobileNumber gender role"
-        );
-        if (!group) {
-            return res.status(404).json({
-                message: "Group not found"
-            });
-        }
-        const approvedMembers = [];
-        const pendingMembers = [];
-        const rejectedMembers = [];
-        group.members.forEach((member) => {
-            const memberData = {
-                userId: member.userId._id,
-                fullName: member.userId.fullName,
-                mobileNumber: member.userId.mobileNumber,
-                gender: member.userId.gender,
-                role: member.userId.role,
-                roleInGroup: member.roleInGroup,
-                status: member.status,
-                note: member.note || "",
-                joinedAt: member.joinedAt
-            };
-            if (member.status === "approved") {
-                approvedMembers.push(memberData);
-            }
-            if (member.status === "pending") {
-                pendingMembers.push(memberData);
-            }
-            if (member.status === "rejected") {
-                rejectedMembers.push(memberData);
-            }
-        });
-        res.status(200).json({
-            message: "Group members fetched successfully",
-            approvedMembers,
-            pendingMembers,
-            rejectedMembers
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: "Failed to fetch group members",
-            error: error.message
-        });
-    }
-};
 const getAdminProfile = async(req, res) => {
     try {
         const adminId = req.user._id;
@@ -522,42 +382,6 @@ const getAdminProfile = async(req, res) => {
             message: error.message,
         });
     }
-};
-const getGroupMemebers = async(req, res) => {
-    try {
-        const { groupCode } = req.params;
-        const group = await Group.findOne({
-            groupCode
-        }).populate(
-            "members.userId",
-            "fullName"
-        );
-        if (!group) {
-            return res.status(404).json({
-                message: "Group not found"
-            });
-        }
-        const members = group.members.map(
-            (member) => ({
-                memberId: member.userId ? member.userId._id : null,
-                fullName: member.userId ? member.userId.fullName : null,
-                roleInGroup: member.roleInGroup,
-                status: member.status === "rejected" ?
-                    "failed" : member.status || "pending",
-            })
-        );
-        res.status(200).json({
-            message: "Group members fetched successfully",
-            members
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: "Failed to fetch group members",
-            error: error.message
-        });
-
-    }
-
 };
 const getAdminMemberProfile = async(req, res) => {
     try {
@@ -746,13 +570,9 @@ module.exports = {
     registerAdmin,
     addMember,
     getAdminDashboardOverview,
-    getAdminGroups,
-    getGroupDetails,
-    getGroupMembers,
     createGroup,
     getAdminProfile,
     updatePaymentDetails,
-    getGroupMemebers,
     getAdminMemberProfile,
     getAdminPaymentDashboard
 };
