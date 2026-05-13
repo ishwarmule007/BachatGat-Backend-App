@@ -7,7 +7,8 @@ const {
     createGroup,
     getAdminProfile,
     updatePaymentDetails,
-    getAdminMemberProfile
+    getAdminMemberProfile,
+    updateUpiId
 } = require("../controllers/adminController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -36,6 +37,10 @@ router.get(
     adminMiddleware,
     getAdminDashboardOverview
 );
+router.patch(
+    "/upi-id",
+    authMiddleware,
+    updateUpiId);
 router.post(
     "/create-group",
     authMiddleware,

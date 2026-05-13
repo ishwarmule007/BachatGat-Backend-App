@@ -158,6 +158,45 @@ const updatePaymentDetails = async(req, res) => {
         });
     }
 };
+const updateUpiId = async(req, res) => {
+    try {
+        const userId = req.user._id || req.user.id;
+        const { upiId } = req.body;
+
+        if (!upiId) {
+            return res.status(400).json({
+                message: "UPI ID is required"
+            });
+        }
+
+        const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
+
+        if (!upiRegex.test(upiId)) {
+            return res.status(400).json({
+                message: "Invalid UPI ID format"
+            });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            userId, { upiId }, { new: true }
+        ).select("fullName mobileNumber upiId");
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "UPI ID updated successfully",
+            user
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message
+        });
+    }
+};
 const createGroup = async(req, res) => {
     try {
         const {
@@ -579,5 +618,6 @@ module.exports = {
     getAdminProfile,
     updatePaymentDetails,
     getAdminMemberProfile,
-    getAdminPaymentDashboard
+    getAdminPaymentDashboard,
+    updateUpiId
 };
