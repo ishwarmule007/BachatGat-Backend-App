@@ -1,6 +1,7 @@
 const Group = require("../models/Group");
 const User = require("../models/User");
 const Contribution = require("../models/Contribution");
+const { createManyNotifications } = require("../utils/notificationHelper");
 const getMemberGroupRequests = async(req, res) => {
     try {
         const userId = req.user._id;
@@ -81,7 +82,19 @@ const acceptGroupRequest = async(req, res) => {
         member.joinedAt = new Date();
 
         await group.save();
+        const approvedMembers = group.members.filter(
+            member => member.status === "approved"
+        );
 
+        const notifications = approvedMembers.map(member => ({
+            userId: member.userId,
+            groupId: group._id,
+            title: "New member added",
+            message: `${user.fullName} has joined ${group.groupName}`,
+            type: "member_joined"
+        }));
+
+        await createManyNotifications(notifications);
         res.status(200).json({
             message: "Group request accepted successfully",
             groupCode,
@@ -133,7 +146,13 @@ const rejectGroupRequest = async(req, res) => {
         member.status = "rejected";
 
         await group.save();
-
+        await createNotification({
+            userId: group.adminId,
+            groupId: group._id,
+            title: "Invitation rejected",
+            message: `${user.fullName} rejected the invitation for ${group.groupName}`,
+            type: "invite_rejected"
+        });
         res.status(200).json({
             message: "Group request rejected successfully",
             groupCode,

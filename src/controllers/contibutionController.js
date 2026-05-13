@@ -1,7 +1,8 @@
 const PaymentRequest = require("../models/PaymentRequest");
 const Contribution = require("../models/contribution");
 const Group = require("../models/Group");
-
+const User = require("../models/User");
+const { createNotification } = require("../utils/notificationHelper");
 exports.createPaymentRequest = async(req, res) => {
     try {
         const {
@@ -72,7 +73,20 @@ exports.createPaymentRequest = async(req, res) => {
             extractedInfo,
             status: "pending",
         });
-
+        await createNotification({
+            userId: group.adminId,
+            groupId: group._id,
+            title: "Payment request received",
+            message: `${user.fullName} has sent payment request of ₹${amount}`,
+            type: "payment_request_received"
+        });
+        await createNotification({
+            userId: user._id,
+            groupId: group._id,
+            title: "Payment request sent",
+            message: `Your payment request of ₹${amount} has been sent`,
+            type: "payment_request_sent"
+        });
         res.status(201).json({
             message: "Payment request submitted successfully",
             paymentRequest,
