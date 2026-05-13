@@ -39,6 +39,15 @@ const userSchema = new mongoose.Schema({
         bankName: {
             type: String,
             default: null
+        },
+        accountType: {
+            type: String,
+            enum: ["savings", "current"],
+            default: null
+        },
+        mobileNumberRegisteredWithBank: {
+            type: String,
+            default: null
         }
     },
     groupIds: [{

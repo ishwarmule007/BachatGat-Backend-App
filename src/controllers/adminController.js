@@ -117,7 +117,8 @@ const getAdminDashboardOverview = async(req, res) => {
 const updatePaymentDetails = async(req, res) => {
     try {
         const {
-            upiId,
+            accountType,
+            mobileNumberRegisteredWithBank,
             accountHolderName,
             accountNumber,
             ifscCode,
@@ -127,8 +128,8 @@ const updatePaymentDetails = async(req, res) => {
         const admin = await User.findByIdAndUpdate(
             req.user._id, {
                 $set: {
-                    upiId: upiId,
-
+                    "bankAccountDetails.accountType": accountType,
+                    "bankAccountDetails.mobileNumberRegisteredWithBank": mobileNumberRegisteredWithBank,
                     "bankAccountDetails.accountHolderName": accountHolderName,
                     "bankAccountDetails.accountNumber": accountNumber,
                     "bankAccountDetails.ifscCode": ifscCode,
@@ -142,8 +143,12 @@ const updatePaymentDetails = async(req, res) => {
             success: true,
             message: "Payment details updated successfully",
             paymentDetails: {
-                upiId: admin.upiId,
-                bankAccountDetails: admin.bankAccountDetails,
+                "bankAccountDetails.accountType": accountType,
+                "bankAccountDetails.mobileNumberRegisteredWithBank": mobileNumberRegisteredWithBank,
+                "bankAccountDetails.accountHolderName": accountHolderName,
+                "bankAccountDetails.accountNumber": accountNumber,
+                "bankAccountDetails.ifscCode": ifscCode,
+                "bankAccountDetails.bankName": bankName,
             },
         });
     } catch (error) {
