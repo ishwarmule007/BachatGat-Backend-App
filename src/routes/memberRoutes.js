@@ -4,6 +4,7 @@ const {
     getMemberGroupRequests,
     acceptGroupRequest,
     rejectGroupRequest,
+    getMemberHomeDashboard
 } = require("../controllers/memberController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -15,7 +16,11 @@ router.get(
     authMiddleware,
     getMemberGroupRequests
 );
-
+router.get(
+    "/home-dashboard",
+    authMiddleware,
+    getMemberHomeDashboard
+);
 router.post(
     "/group-requests/accept",
     authMiddleware,
