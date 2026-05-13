@@ -15,10 +15,24 @@ const initializeSocket = (server) => {
 
     io.use(async(socket, next) => {
         try {
-            const token =
-                socket.handshake.auth?.token ||
-                socket.handshake.headers?.authorization?.split(" ")[1] ||
-                socket.handshake.query?.token;
+            let token;
+
+            if (
+                socket.handshake.auth &&
+                socket.handshake.auth.token
+            ) {
+                token = socket.handshake.auth.token;
+            } else if (
+                socket.handshake.headers &&
+                socket.handshake.headers.authorization
+            ) {
+                token = socket.handshake.headers.authorization.split(" ")[1];
+            } else if (
+                socket.handshake.query &&
+                socket.handshake.query.token
+            ) {
+                token = socket.handshake.query.token;
+            }
 
             if (!token) {
                 return next(new Error("Token missing"));
@@ -33,6 +47,7 @@ const initializeSocket = (server) => {
             }
 
             socket.user = user;
+
             next();
         } catch (error) {
             next(new Error("Authentication failed"));
@@ -54,6 +69,7 @@ const initializeSocket = (server) => {
 
                 const isApprovedMember = group.members.some(
                     (m) =>
+                    m.userId &&
                     m.userId.toString() === socket.user._id.toString() &&
                     m.status === "approved"
                 );
@@ -95,6 +111,7 @@ const initializeSocket = (server) => {
 
                 const isApprovedMember = group.members.some(
                     (m) =>
+                    m.userId &&
                     m.userId.toString() === socket.user._id.toString() &&
                     m.status === "approved"
                 );
@@ -116,9 +133,17 @@ const initializeSocket = (server) => {
                 });
 
                 const populatedMessage = await Message.findById(newMessage._id)
-                    .populate("senderId", "fullName mobileNumber roleSelection");
+                    .populate(
+                        "senderId",
+                        "fullName mobileNumber roleSelection"
+                    );
 
-                io.to(groupCode).emit("receiveMessage", populatedMessage);
+                socket.join(groupCode);
+
+                io.to(groupCode).emit(
+                    "receiveMessage",
+                    populatedMessage
+                );
             } catch (error) {
                 socket.emit("errorMessage", {
                     message: error.message
@@ -127,7 +152,10 @@ const initializeSocket = (server) => {
         });
 
         socket.on("disconnect", () => {
-            console.log("User disconnected:", socket.user.fullName);
+            console.log(
+                "User disconnected:",
+                socket.user.fullName
+            );
         });
     });
 };
