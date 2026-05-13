@@ -13,14 +13,11 @@ const initializeSocket = (server) => {
         }
     });
 
-    io.use(async(socket, next) => {
+    io.use(async (socket, next) => {
         try {
             let token;
 
-            if (
-                socket.handshake.auth &&
-                socket.handshake.auth.token
-            ) {
+            if (socket.handshake.auth && socket.handshake.auth.token) {
                 token = socket.handshake.auth.token;
             } else if (
                 socket.handshake.headers &&
@@ -47,7 +44,6 @@ const initializeSocket = (server) => {
             }
 
             socket.user = user;
-
             next();
         } catch (error) {
             next(new Error("Authentication failed"));
@@ -57,9 +53,26 @@ const initializeSocket = (server) => {
     io.on("connection", (socket) => {
         console.log("User connected:", socket.user.fullName);
 
-        socket.on("joinGroup", async({ groupCode }) => {
+        socket.on("joinGroup", async (data) => {
             try {
-                const group = await Group.findOne({ groupCode });
+                console.log("JOIN RAW DATA:", data);
+
+                const groupCode = data && data.groupCode;
+                const cleanGroupCode = String(groupCode || "").trim();
+
+                console.log("CLEAN GROUP CODE:", cleanGroupCode);
+
+                if (!cleanGroupCode) {
+                    return socket.emit("errorMessage", {
+                        message: "groupCode is required"
+                    });
+                }
+
+                const group = await Group.findOne({
+                    groupCode: cleanGroupCode
+                });
+
+                console.log("FOUND GROUP:", group ? group.groupCode : null);
 
                 if (!group) {
                     return socket.emit("errorMessage", {
@@ -69,9 +82,9 @@ const initializeSocket = (server) => {
 
                 const isApprovedMember = group.members.some(
                     (m) =>
-                    m.userId &&
-                    m.userId.toString() === socket.user._id.toString() &&
-                    m.status === "approved"
+                        m.userId &&
+                        m.userId.toString() === socket.user._id.toString() &&
+                        m.status === "approved"
                 );
 
                 if (!isApprovedMember) {
@@ -80,11 +93,11 @@ const initializeSocket = (server) => {
                     });
                 }
 
-                socket.join(groupCode);
+                socket.join(cleanGroupCode);
 
                 socket.emit("joinedGroup", {
                     message: "Joined group chat successfully",
-                    groupCode
+                    groupCode: cleanGroupCode
                 });
             } catch (error) {
                 socket.emit("errorMessage", {
@@ -93,15 +106,27 @@ const initializeSocket = (server) => {
             }
         });
 
-        socket.on("sendMessage", async({ groupCode, message, messageType }) => {
+        socket.on("sendMessage", async (data) => {
             try {
-                if (!groupCode || !message) {
+                console.log("SEND MESSAGE RAW DATA:", data);
+
+                const groupCode = data && data.groupCode;
+                const message = data && data.message;
+                const messageType = data && data.messageType;
+
+                const cleanGroupCode = String(groupCode || "").trim();
+
+                if (!cleanGroupCode || !message) {
                     return socket.emit("errorMessage", {
                         message: "groupCode and message are required"
                     });
                 }
 
-                const group = await Group.findOne({ groupCode });
+                const group = await Group.findOne({
+                    groupCode: cleanGroupCode
+                });
+
+                console.log("FOUND GROUP FOR MESSAGE:", group ? group.groupCode : null);
 
                 if (!group) {
                     return socket.emit("errorMessage", {
@@ -111,9 +136,9 @@ const initializeSocket = (server) => {
 
                 const isApprovedMember = group.members.some(
                     (m) =>
-                    m.userId &&
-                    m.userId.toString() === socket.user._id.toString() &&
-                    m.status === "approved"
+                        m.userId &&
+                        m.userId.toString() === socket.user._id.toString() &&
+                        m.status === "approved"
                 );
 
                 if (!isApprovedMember) {
@@ -127,23 +152,19 @@ const initializeSocket = (server) => {
                     senderId: socket.user._id,
                     messageType: messageType || "text",
                     message,
-                    readBy: [{
-                        userId: socket.user._id
-                    }]
+                    readBy: [
+                        {
+                            userId: socket.user._id
+                        }
+                    ]
                 });
 
                 const populatedMessage = await Message.findById(newMessage._id)
-                    .populate(
-                        "senderId",
-                        "fullName mobileNumber roleSelection"
-                    );
+                    .populate("senderId", "fullName mobileNumber roleSelection");
 
-                socket.join(groupCode);
+                socket.join(cleanGroupCode);
 
-                io.to(groupCode).emit(
-                    "receiveMessage",
-                    populatedMessage
-                );
+                io.to(cleanGroupCode).emit("receiveMessage", populatedMessage);
             } catch (error) {
                 socket.emit("errorMessage", {
                     message: error.message
@@ -152,10 +173,7 @@ const initializeSocket = (server) => {
         });
 
         socket.on("disconnect", () => {
-            console.log(
-                "User disconnected:",
-                socket.user.fullName
-            );
+            console.log("User disconnected:", socket.user.fullName);
         });
     });
 };
