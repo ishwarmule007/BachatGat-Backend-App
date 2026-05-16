@@ -207,5 +207,3 @@ module.exports = {
     verifyOTP,
     forgetPassword
 }
-forgetPassword
-}
