@@ -7,7 +7,8 @@ const {
     updatePaymentRequestStatus,
     getMemberPaymentPage,
     getMemberPaymentHistory,
-    getAdminPaymentRequests
+    getAdminPaymentRequests,
+    getPaymentRequestDetail
 } = require("../controllers/paymentController");
 const {
     createPaymentRequest
@@ -42,6 +43,12 @@ router.get(
     authMiddleware,
     adminMiddleware,
     getAdminPaymentDashboard
+);
+router.get(
+    "/admin/requests/:requestId",
+    authMiddleware,
+    adminMiddleware,
+    getPaymentRequestDetail
 );
 
 module.exports = router;

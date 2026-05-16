@@ -182,3 +182,31 @@ exports.getAdminPaymentRequests = async (req, res) => {
     });
   }
 };
+exports.getPaymentRequestDetail = async (req, res) => {
+  try {
+    const adminId = req.user._id;
+    const { requestId } = req.params;
+
+    const request = await PaymentRequest.findOne({
+      _id: requestId,
+      adminId,
+    })
+      .populate("memberId", "fullName mobileNumber profilePicture")
+      .populate("groupId", "groupName groupCode");
+
+    if (!request) {
+      return res.status(404).json({
+        message: "Payment request not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "Payment request detail fetched successfully",
+      request,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
