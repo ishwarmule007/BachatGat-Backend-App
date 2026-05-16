@@ -221,8 +221,7 @@ exports.getAdminPaymentRequests = async (req, res) => {
       message: error.message,
     });
   }
-};
-exports.getPaymentRequestDetail = async (req, res) => {
+};exports.getPaymentRequestDetail = async (req, res) => {
   try {
     const adminId = req.user._id;
     const { requestId } = req.params;
@@ -231,7 +230,7 @@ exports.getPaymentRequestDetail = async (req, res) => {
       _id: requestId,
       adminId,
     })
-      .populate("memberId", "fullName mobileNumber profilePicture")
+      .populate("userId", "fullName mobileNumber profilePicture")
       .populate("groupId", "groupName groupCode");
 
     if (!request) {
@@ -242,7 +241,14 @@ exports.getPaymentRequestDetail = async (req, res) => {
 
     res.status(200).json({
       message: "Payment request detail fetched successfully",
-      request,
+      request: {
+        ...request.toObject(),
+
+        status: request.status,
+        rejectionReason: request.rejectionReason || "",
+        acceptedAt: request.acceptedAt,
+        rejectedAt: request.rejectedAt,
+      },
     });
   } catch (error) {
     res.status(500).json({
