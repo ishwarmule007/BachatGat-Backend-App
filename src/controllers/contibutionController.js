@@ -28,12 +28,14 @@ exports.createPaymentRequest = async(req, res) => {
         }
 
         const member = group.members.find(
-            (m) => m.userId.toString() === req.user._id.toString()
+            (m) =>
+            m.userId.toString() === req.user._id.toString() &&
+            m.status === "approved"
         );
 
         if (!member) {
             return res.status(403).json({
-                message: "You are not a member of this group",
+                message: "You are not an approved member of this group",
             });
         }
 
@@ -41,6 +43,7 @@ exports.createPaymentRequest = async(req, res) => {
             userId: req.user._id,
             groupId,
             month,
+            status: "paid",
         });
 
         if (existingContribution) {
@@ -62,31 +65,36 @@ exports.createPaymentRequest = async(req, res) => {
             });
         }
 
+        const amount = member.monthlyContributionAmount || 0;
+
         const paymentRequest = await PaymentRequest.create({
             userId: req.user._id,
             groupId,
             adminId: group.adminId,
-            amount: member.monthlyContributionAmount,
+            amount,
             month,
             upiId,
             screenshotUrl,
             extractedInfo,
             status: "pending",
         });
+
         await createNotification({
             userId: group.adminId,
             groupId: group._id,
             title: "Payment request received",
-            message: `${user.fullName} has sent payment request of ₹${amount}`,
-            type: "payment_request_received"
+            message: `${req.user.fullName} has sent payment request of ₹${amount}`,
+            type: "payment_request_received",
         });
+
         await createNotification({
-            userId: user._id,
+            userId: req.user._id,
             groupId: group._id,
             title: "Payment request sent",
             message: `Your payment request of ₹${amount} has been sent`,
-            type: "payment_request_sent"
+            type: "payment_request_sent",
         });
+
         res.status(201).json({
             message: "Payment request submitted successfully",
             paymentRequest,
