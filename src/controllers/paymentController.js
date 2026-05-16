@@ -153,3 +153,32 @@ exports.getMemberPaymentHistory = async (req, res) => {
         });
     }
 };
+exports.getAdminPaymentRequests = async (req, res) => {
+  try {
+    const adminId = req.user._id;
+
+    const requests = await PaymentRequest.find({ adminId })
+      .populate("memberId", "fullName mobileNumber profilePicture")
+      .populate("groupId", "groupName groupCode")
+      .sort({ createdAt: -1 });
+
+    const pending = requests.filter((r) => r.status === "pending");
+    const approved = requests.filter((r) => r.status === "approved");
+    const rejected = requests.filter((r) => r.status === "rejected");
+
+    res.status(200).json({
+      message: "Payment requests fetched successfully",
+      counts: {
+        all: requests.length,
+        pending: pending.length,
+        approved: approved.length,
+        rejected: rejected.length,
+      },
+      requests,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};

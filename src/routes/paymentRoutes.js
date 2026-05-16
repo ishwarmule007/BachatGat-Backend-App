@@ -3,11 +3,11 @@ const router = express.Router();
 
 const authMiddleware = require("../middlewares/authMiddleware");
 const adminMiddleware = require("../middlewares/adminMiddleware");
-
 const {
     updatePaymentRequestStatus,
     getMemberPaymentPage,
-    getMemberPaymentHistory
+    getMemberPaymentHistory,
+    getAdminPaymentRequests
 } = require("../controllers/paymentController");
 const {
     createPaymentRequest
@@ -31,6 +31,12 @@ router.get(
     getMemberPaymentHistory
 );
 
+router.get(
+    "/admin/requests",
+    authMiddleware,
+    adminMiddleware,
+    getAdminPaymentRequests
+);
 router.get(
     "/admin/dashboard",
     authMiddleware,
