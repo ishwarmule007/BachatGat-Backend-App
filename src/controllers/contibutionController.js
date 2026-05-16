@@ -1,25 +1,36 @@
-const PaymentRequest = require("../models/PaymentRequest");
-const Contribution = require("../models/contribution");
 const Group = require("../models/Group");
-const User = require("../models/User");
+const Contribution = require("../models/Contribution");
+const PaymentRequest = require("../models/PaymentRequest");
+
+const cloudinary = require("../config/cloud_for_photo");
+
+const sharp = require("sharp");
+const streamifier = require("streamifier");
+
 const { createNotification } = require("../utils/createNotification");
+
 exports.createPaymentRequest = async(req, res) => {
     try {
         const {
             groupCode,
             month,
             upiId,
-            screenshotUrl,
             extractedInfo,
         } = req.body;
 
-        if (!groupCode || !month || !upiId || !screenshotUrl) {
+        if (!groupCode || !month || !upiId) {
             return res.status(400).json({
-                message: "groupCode, month, upiId and screenshotUrl are required",
+                message: "groupCode, month and upiId are required",
             });
         }
 
-        const group = await Group.findOne({ groupCode: groupCode });
+        if (!req.file) {
+            return res.status(400).json({
+                message: "Screenshot is required",
+            });
+        }
+
+        const group = await Group.findOne({ groupCode });
 
         if (!group) {
             return res.status(404).json({
@@ -65,6 +76,30 @@ exports.createPaymentRequest = async(req, res) => {
             });
         }
 
+        // Compress image
+        const compressedImageBuffer = await sharp(req.file.buffer)
+            .resize({ width: 800 })
+            .jpeg({ quality: 60 })
+            .toBuffer();
+
+        // Upload to cloudinary
+        const uploadFromBuffer = () => {
+            return new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream({
+                        folder: "payment_screenshots",
+                    },
+                    (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result);
+                    }
+                );
+
+                streamifier.createReadStream(compressedImageBuffer).pipe(uploadStream);
+            });
+        };
+
+        const uploadedImage = await uploadFromBuffer();
+
         const amount = member.monthlyContributionAmount || 0;
 
         const paymentRequest = await PaymentRequest.create({
@@ -74,7 +109,7 @@ exports.createPaymentRequest = async(req, res) => {
             amount,
             month,
             upiId,
-            screenshotUrl,
+            screenshotUrl: uploadedImage.secure_url,
             extractedInfo,
             status: "pending",
         });
@@ -99,6 +134,7 @@ exports.createPaymentRequest = async(req, res) => {
             message: "Payment request submitted successfully",
             paymentRequest,
         });
+
     } catch (error) {
         res.status(500).json({
             message: error.message,
