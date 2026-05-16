@@ -1,9 +1,11 @@
 const PaymentRequest = require("../models/PaymentRequest");
 const Contribution = require("../models/contribution");
+const Group = require("../models/Group");
+const User = require("../models/User");
 const { createNotification } = require("../utils/createNotification");
 exports.updatePaymentRequestStatus = async(req, res) => {
     try {
-        const { paymentRequestId, status } = req.body;
+        const { paymentRequestId, status, rejectionReason } = req.body;
 
         if (!paymentRequestId || !status) {
             return res.status(400).json({
@@ -17,7 +19,15 @@ exports.updatePaymentRequestStatus = async(req, res) => {
             });
         }
 
-        const paymentRequest = await PaymentRequest.findById(paymentRequestId);
+        if (status === "rejected" && !rejectionReason) {
+            return res.status(400).json({
+                message: "rejectionReason is required when rejecting payment",
+            });
+        }
+
+        const paymentRequest = await PaymentRequest.findById(paymentRequestId)
+            .populate("userId", "fullName mobileNumber")
+            .populate("groupId", "groupName groupCode");
 
         if (!paymentRequest) {
             return res.status(404).json({
@@ -42,24 +52,54 @@ exports.updatePaymentRequestStatus = async(req, res) => {
         if (status === "accepted") {
             paymentRequest.acceptedAt = new Date();
 
+            const existingContribution = await Contribution.findOne({
+                userId: paymentRequest.userId._id,
+                groupId: paymentRequest.groupId._id,
+                month: paymentRequest.month,
+            });
+
+            if (existingContribution) {
+                return res.status(400).json({
+                    message: "Contribution already exists for this month",
+                });
+            }
+
             await Contribution.create({
-                userId: paymentRequest.userId,
-                groupId: paymentRequest.groupId,
+                userId: paymentRequest.userId._id,
+                groupId: paymentRequest.groupId._id,
                 amount: paymentRequest.amount,
                 month: paymentRequest.month,
                 status: "paid",
                 paymentRequestId: paymentRequest._id,
             });
+
+            await createNotification({
+                userId: paymentRequest.userId._id,
+                groupId: paymentRequest.groupId._id,
+                title: "Payment accepted",
+                message: `Your payment of ₹${paymentRequest.amount} for ${paymentRequest.month} has been accepted`,
+                type: "payment_accepted",
+            });
         }
 
         if (status === "rejected") {
             paymentRequest.rejectedAt = new Date();
+            paymentRequest.rejectionReason = rejectionReason;
+
+            await createNotification({
+                userId: paymentRequest.userId._id,
+                groupId: paymentRequest.groupId._id,
+                title: "Payment rejected",
+                message: `Your payment request of ₹${paymentRequest.amount} for ${paymentRequest.month} has been rejected. Reason: ${rejectionReason}`,
+                type: "payment_rejected",
+            });
         }
 
         await paymentRequest.save();
 
         res.status(200).json({
             message: `Payment request ${status} successfully`,
+            paymentRequest,
         });
     } catch (error) {
         res.status(500).json({

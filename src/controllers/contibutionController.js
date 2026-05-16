@@ -6,20 +6,20 @@ const { createNotification } = require("../utils/createNotification");
 exports.createPaymentRequest = async(req, res) => {
     try {
         const {
-            groupId,
+            groupCode,
             month,
             upiId,
             screenshotUrl,
             extractedInfo,
         } = req.body;
 
-        if (!groupId || !month || !upiId || !screenshotUrl) {
+        if (!groupCode || !month || !upiId || !screenshotUrl) {
             return res.status(400).json({
-                message: "groupId, month, upiId and screenshotUrl are required",
+                message: "groupCode, month, upiId and screenshotUrl are required",
             });
         }
 
-        const group = await Group.findById(groupId);
+        const group = await Group.findOne({ groupCode: groupCode });
 
         if (!group) {
             return res.status(404).json({
@@ -41,7 +41,7 @@ exports.createPaymentRequest = async(req, res) => {
 
         const existingContribution = await Contribution.findOne({
             userId: req.user._id,
-            groupId,
+            groupId: group._id,
             month,
             status: "paid",
         });
@@ -54,7 +54,7 @@ exports.createPaymentRequest = async(req, res) => {
 
         const existingPendingRequest = await PaymentRequest.findOne({
             userId: req.user._id,
-            groupId,
+            groupId: group._id,
             month,
             status: "pending",
         });
@@ -69,7 +69,7 @@ exports.createPaymentRequest = async(req, res) => {
 
         const paymentRequest = await PaymentRequest.create({
             userId: req.user._id,
-            groupId,
+            groupId: group._id,
             adminId: group.adminId,
             amount,
             month,
