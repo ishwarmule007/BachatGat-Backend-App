@@ -8,11 +8,11 @@ const jwt = require("jsonwebtoken");
 
 const passwordlogin = async(req, res) => {
     try {
-        const { mobileNumber, password } = req.body;
+        const { mobileNumber, password, roleSelection } = req.body;
 
-        if (!mobileNumber || !password) {
+        if (!mobileNumber || !password || !roleSelection) {
             return res.status(400).json({
-                message: "Mobile number and password are required"
+                message: "Mobile number, password, and role selection are required"
             });
         }
 
@@ -30,6 +30,11 @@ const passwordlogin = async(req, res) => {
             });
         }
 
+        if (user.roleSelection !== roleSelection) {
+            return res.status(400).json({
+                message: "Selected role does not match user's role"
+            });
+        }
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
@@ -201,4 +206,6 @@ module.exports = {
     sendOTP,
     verifyOTP,
     forgetPassword
+}
+forgetPassword
 }
