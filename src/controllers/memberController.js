@@ -1,6 +1,6 @@
 const Group = require("../models/Group");
 const User = require("../models/User");
-const Contribution = require("../models/Contribution");
+const Contribution = require("../models/contribution");
 const { createManyNotifications } = require("../utils/createNotification");
 const getMemberGroupRequests = async(req, res) => {
     try {
