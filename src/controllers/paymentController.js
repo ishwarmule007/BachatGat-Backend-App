@@ -221,7 +221,8 @@ exports.getAdminPaymentRequests = async (req, res) => {
       message: error.message,
     });
   }
-};exports.getPaymentRequestDetail = async (req, res) => {
+};
+exports.getPaymentRequestDetail = async (req, res) => {
   try {
     const adminId = req.user._id;
     const { requestId } = req.params;
