@@ -364,7 +364,7 @@ const addMember = async(req, res) => {
         if (isNewUser) {
             const message = `Hello ${fullName}, you have been added to ${group.groupName}. Your username is your mobile number: ${mobileNumber}, and your password is : ${passkey}. Please login and accept or reject the group request.`;
 
-            await sendSMS(mobileNumber, message);
+            //await sendSMS(mobileNumber, message);
         }
         return res.status(200).json({
             message: isNewUser ?
