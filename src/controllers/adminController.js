@@ -209,7 +209,8 @@ const createGroup = async(req, res) => {
             taluka,
             district,
             state,
-            formationDate
+            formationDate,
+            groupDurationInYears
         } = req.body;
         if (!groupName || !groupCode) {
             return res.status(400).json({
@@ -253,7 +254,8 @@ const createGroup = async(req, res) => {
                 userId: req.user._id,
                 roleInGroup: "admin",
                 status: "approved"
-            }]
+            }],
+            durationOfGroup: groupDurationInYears || 0
         });
         await newGroup.save();
         if (!req.user.groupIds.includes(newGroup._id)) {
