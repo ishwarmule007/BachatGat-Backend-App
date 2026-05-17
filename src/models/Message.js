@@ -28,7 +28,32 @@ const messageSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    isPinned: {
+        type: Boolean,
+        default: false
+    },
 
+    pinnedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+    },
+
+    pinnedAt: {
+        type: Date,
+        default: null
+    },
+
+    deletedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+    },
+
+    deletedAt: {
+        type: Date,
+        default: null
+    },
     readBy: [{
         userId: {
             type: mongoose.Schema.Types.ObjectId,
