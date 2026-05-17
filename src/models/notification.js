@@ -25,14 +25,18 @@ const notificationSchema = new mongoose.Schema({
     type: {
         type: String,
         enum: [
-            "member_joined",
-            "invite_rejected",
-            "payment_request",
-            "payment_request_to_admin",
-            "collection_summary"
+            "member_added",
+            "member_request",
+            "member_approved",
+            "member_rejected",
+            "announcement",
+            "payment_request_received",
+            "payment_request_sent",
+            "payment_request_accepted",
+            "payment_request_rejected"
         ],
         required: true
-    },
+    }
 
     isRead: {
         type: Boolean,
