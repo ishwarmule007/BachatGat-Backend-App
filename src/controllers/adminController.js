@@ -229,6 +229,11 @@ const createGroup = async(req, res) => {
                 message: "Group code already exists"
             });
         }
+        if (!village || !taluka || !district || !state || !formationDate) {
+            return res.status(400).json({
+                message: "village, taluka, district, state and formationDate are required"
+            });
+        }
         const fullAddress =
             `${village}, ${taluka}, ${district}, ${state}, India`;
 
@@ -265,6 +270,7 @@ const createGroup = async(req, res) => {
         res.status(201).json({
             message: "Group created successfully",
             groupId: newGroup._id,
+
             groupName: newGroup.groupName,
             groupCode: newGroup.groupCode
         });
@@ -540,9 +546,7 @@ const getAdminPaymentDashboard = async(req, res) => {
         const adminId = req.user._id;
 
         const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(
-      now.getMonth() + 1
-    ).padStart(2, "0")}`;
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
         const groups = await Group.find({ adminId });
 
