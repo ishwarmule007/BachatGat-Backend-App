@@ -36,7 +36,7 @@ const notificationSchema = new mongoose.Schema({
             "payment_request_rejected"
         ],
         required: true
-    }
+    },
 
     isRead: {
         type: Boolean,
