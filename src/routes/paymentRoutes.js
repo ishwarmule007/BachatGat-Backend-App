@@ -8,7 +8,8 @@ const {
     getMemberPaymentPage,
     getMemberPaymentHistory,
     getAdminPaymentRequests,
-    getPaymentRequestDetail
+    getPaymentRequestDetail,
+    generateContributionPaymentLink
 } = require("../controllers/paymentController");
 const {
     createPaymentRequest
@@ -56,5 +57,10 @@ router.patch(
     authMiddleware,
     adminMiddleware,
     updatePaymentRequestStatus
+);
+router.get(
+    "/generate-payment-link/:groupId",
+    authMiddleware,
+    generateContributionPaymentLink
 );
 module.exports = router;

@@ -296,3 +296,98 @@ exports.getPaymentRequestDetail = async (req, res) => {
     });
   }
 };
+exports.generateContributionPaymentLink = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const { groupId } = req.params;
+
+    const group = await Group.findById(groupId).populate(
+      "adminId",
+      "fullName upiId"
+    );
+
+    if (!group) {
+      return res.status(404).json({
+        message: "Group not found",
+      });
+    }
+
+    const member = group.members.find(
+      (m) => m.userId.toString() === userId.toString()
+    );
+
+    if (!member) {
+      return res.status(403).json({
+        message: "You are not a member of this group",
+      });
+    }
+
+    const amount =
+      member.monthlyContributionAmount || 500;
+
+    const now = new Date();
+
+    const month = `${now.getFullYear()}-${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}`;
+
+    if (!group.adminId.upiId) {
+      return res.status(400).json({
+        message: "Admin UPI ID not found",
+      });
+    }
+
+    const transactionNote = `${group.groupName} Contribution ${month}`;
+
+    const upiDeepLink =
+      `upi://pay?pa=${encodeURIComponent(group.adminId.upiId)}` +
+      `&pn=${encodeURIComponent(group.adminId.fullName)}` +
+      `&am=${amount}` +
+      `&cu=INR` +
+      `&tn=${encodeURIComponent(transactionNote)}`;
+
+    res.status(200).json({
+  message: "Payment page data fetched successfully",
+
+  group: {
+    groupId: group._id,
+    groupName: group.groupName,
+  },
+
+  amountDetails: {
+    amount,
+    month,
+  },
+
+  ownerAccount: {
+    adminId: group.adminId._id,
+    adminName: group.adminId.fullName,
+
+    upiId: group.adminId.upiId,
+
+    bankAccountDetails: {
+      accountHolderName:
+        group.adminId.bankAccountDetails?.accountHolderName,
+
+      bankName:
+        group.adminId.bankAccountDetails?.bankName,
+
+      accountNumber:
+        group.adminId.bankAccountDetails?.accountNumber,
+
+      ifscCode:
+        group.adminId.bankAccountDetails?.ifscCode,
+    },
+  },
+
+  paymentDetails: {
+    upiDeepLink,
+  },
+});
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+    }
+};
