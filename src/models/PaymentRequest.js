@@ -50,5 +50,9 @@ const paymentRequestSchema = new mongoose.Schema({
     rejectionReason: {
         type: String
     },
+    additionalComments: {
+        type: String,
+        default: ""
+    }
 }, { timestamps: true });
 module.exports = mongoose.model("PaymentRequest", paymentRequestSchema);

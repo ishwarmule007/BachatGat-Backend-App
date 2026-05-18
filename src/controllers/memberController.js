@@ -1,6 +1,8 @@
 const Group = require("../models/Group");
 const User = require("../models/User");
 const Contribution = require("../models/contribution");
+const Loan = require("../models/Loan");
+const PaymentRequest = require("../models/PaymentRequest");
 const { createManyNotifications } = require("../utils/createNotification");
 const getMemberGroupRequests = async(req, res) => {
     try {
@@ -39,6 +41,47 @@ const getMemberGroupRequests = async(req, res) => {
         res.status(500).json({
             message: "Failed to fetch group requests",
             error: error.message
+        });
+    }
+};
+const getRejectedPaymentDetail = async(req, res) => {
+    try {
+        const userId = req.user._id;
+        const { requestId } = req.params;
+
+        const request = await PaymentRequest.findOne({
+                _id: requestId,
+                userId,
+                status: "rejected",
+            })
+            .populate("groupId", "groupName groupCode")
+            .populate("adminId", "fullName");
+
+        if (!request) {
+            return res.status(404).json({
+                message: "Rejected payment request not found",
+            });
+        }
+
+        res.status(200).json({
+            message: "Rejected payment detail fetched successfully",
+            data: {
+                requestId: request._id,
+                rejectedOn: request.rejectedAt || request.updatedAt,
+                rejectedBy: request.adminId ? request.adminId.fullName || "Admin" : "Admin",
+                groupName: request.groupId ? request.groupId.groupName || "" : "",
+                amount: request.amount,
+                month: request.month,
+                upiId: request.upiId,
+                reason: request.rejectionReason,
+                additionalComments: request.additionalComments,
+                oldScreenshotUrl: request.screenshotUrl,
+                status: request.status,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
         });
     }
 };
@@ -367,5 +410,6 @@ module.exports = {
     acceptGroupRequest,
     rejectGroupRequest,
     getMemberHomeDashboard,
-    getMemberProfile
+    getMemberProfile,
+    getRejectedPaymentDetail
 };
