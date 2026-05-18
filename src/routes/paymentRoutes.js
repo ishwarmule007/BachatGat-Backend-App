@@ -51,5 +51,11 @@ router.get(
     adminMiddleware,
     getPaymentRequestDetail
 );
+router.patch(
+    "/admin/requests/:requestId/status",
+    authMiddleware,
+    adminMiddleware,
+    updatePaymentRequestStatus
+);
 
 module.exports = router;
