@@ -14,7 +14,10 @@ const userSchema = new mongoose.Schema({
     roleSelection: { type: String, enum: ['admin', 'user'], required: true },
     gender: { type: String },
     dateOfBirth: { type: Date },
-    prefferredLanguage: { type: String },
+    prefferredLanguage: {
+        type: String,
+        default: "English"
+    },
     upiId: {
         type: String,
         default: null
