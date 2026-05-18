@@ -202,19 +202,58 @@ exports.getAdminPaymentRequests = async (req, res) => {
       .populate("groupId", "groupName groupCode")
       .sort({ createdAt: -1 });
 
-    const pending = requests.filter((r) => r.status === "pending");
-    const approved = requests.filter((r) => r.status === "approved");
-    const rejected = requests.filter((r) => r.status === "rejected");
+    const formattedRequests = requests.map((request) => ({
+      requestId: request._id,
+
+      memberId: request.userId?._id,
+      memberName: request.userId?.fullName || "Unknown Member",
+      mobileNumber: request.userId?.mobileNumber || "",
+      profilePicture: request.userId?.profilePicture || "",
+
+      groupId: request.groupId?._id,
+      groupName: request.groupId?.groupName || "",
+      groupCode: request.groupId?.groupCode || "",
+
+      amount: request.amount,
+      month: request.month,
+      upiId: request.upiId,
+      screenshotUrl: request.screenshotUrl,
+      extractedInfo: request.extractedInfo,
+
+      status: request.status,
+
+      rejectionReason: request.rejectionReason || "",
+
+      acceptedAt: request.acceptedAt || null,
+      rejectedAt: request.rejectedAt || null,
+
+      createdAt: request.createdAt,
+      updatedAt: request.updatedAt,
+    }));
+
+    const pending = formattedRequests.filter(
+      (r) => r.status === "pending"
+    );
+
+    const accepted = formattedRequests.filter(
+      (r) => r.status === "accepted"
+    );
+
+    const rejected = formattedRequests.filter(
+      (r) => r.status === "rejected"
+    );
 
     res.status(200).json({
       message: "Payment requests fetched successfully",
+
       counts: {
-        all: requests.length,
+        all: formattedRequests.length,
         pending: pending.length,
-        approved: approved.length,
+        accepted: accepted.length,
         rejected: rejected.length,
       },
-      requests,
+
+      requests: formattedRequests,
     });
   } catch (error) {
     res.status(500).json({

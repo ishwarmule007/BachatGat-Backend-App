@@ -546,9 +546,13 @@ const getAdminPaymentDashboard = async(req, res) => {
         const adminId = req.user._id;
 
         const now = new Date();
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        const currentMonth = `${now.getFullYear()}-${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}`;
 
         const groups = await Group.find({ adminId });
+
+        const groupIds = groups.map((g) => g._id);
 
         let totalReceivableThisMonth = 0;
 
@@ -562,7 +566,7 @@ const getAdminPaymentDashboard = async(req, res) => {
 
         const receivedThisMonth = await Contribution.aggregate([{
                 $match: {
-                    groupId: { $in: groups.map((g) => g._id) },
+                    groupId: { $in: groupIds },
                     month: currentMonth,
                     status: "paid",
                 },
@@ -580,12 +584,33 @@ const getAdminPaymentDashboard = async(req, res) => {
                 adminId,
                 status: "pending",
             })
-            .populate("userId", "fullName mobileNumber")
+            .populate("userId", "fullName mobileNumber profilePicture")
             .populate("groupId", "groupName groupCode")
             .sort({ createdAt: -1 });
 
-        const pendingAmount = pendingRequests.reduce(
-            (sum, p) => sum + p.amount,
+        const formattedPendingRequests = pendingRequests.map((request) => ({
+            requestId: request._id,
+
+            memberId: request.userId ? request.userId._id : null,
+            memberName: request.userId ? request.userId.fullName || "Unknown Member" : "Unknown Member",
+            mobileNumber: request.userId ? request.userId.mobileNumber || "" : "",
+            profilePicture: request.userId ? request.userId.profilePicture || "" : "",
+
+            groupId: request.groupId ? request.groupId._id : null,
+            groupName: request.groupId ? request.groupId.groupName || "" : "",
+            groupCode: request.groupId ? request.groupId.groupCode || "" : "",
+
+            amount: request.amount,
+            month: request.month,
+            upiId: request.upiId,
+            screenshotUrl: request.screenshotUrl,
+            extractedInfo: request.extractedInfo,
+            status: request.status,
+            createdAt: request.createdAt,
+        }));
+
+        const pendingAmount = formattedPendingRequests.reduce(
+            (sum, request) => sum + (request.amount || 0),
             0
         );
 
@@ -597,18 +622,14 @@ const getAdminPaymentDashboard = async(req, res) => {
             currentMonth,
 
             totalReceivableThisMonth,
-
             totalReceivedThisMonth: receivedTotal,
-
             remainingReceivableThisMonth: totalReceivableThisMonth - receivedTotal,
-
             totalTransactionsThisMonth: receivedCount,
 
-            pendingPaymentRequests: pendingRequests.length,
-
+            pendingPaymentRequests: formattedPendingRequests.length,
             pendingAmount,
 
-            pendingRequests,
+            pendingRequests: formattedPendingRequests,
         });
     } catch (error) {
         res.status(500).json({
