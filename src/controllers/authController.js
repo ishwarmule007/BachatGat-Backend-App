@@ -105,7 +105,7 @@ const sendOTP = async(req, res) => {
 const getMyProfile = async(req, res) => {
     try {
         const user = await User.findById(req.user._id).select(
-            "fullName mobileNumber emailAddress profilePicture roleSelection prefferedLanguage"
+            "fullName mobileNumber roleSelection prefferredLanguage"
         );
 
         if (!user) {
@@ -117,8 +117,11 @@ const getMyProfile = async(req, res) => {
         res.status(200).json({
             message: "Profile fetched successfully",
             user: {
-                ...user.toObject(),
-                preferredLanguage: user.prefferedLanguage,
+                _id: user._id,
+                fullName: user.fullName,
+                mobileNumber: user.mobileNumber,
+                roleSelection: user.roleSelection,
+                preferredLanguage: user.prefferredLanguage || "English",
             },
         });
 
