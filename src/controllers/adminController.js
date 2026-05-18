@@ -616,6 +616,92 @@ const getAdminPaymentDashboard = async(req, res) => {
         });
     }
 };
+const removeMemberFromGroup = async(req, res) => {
+    try {
+        const adminId = req.user._id;
+        const { groupId, memberId } = req.params;
+
+        const group = await Group.findOne({
+            _id: groupId,
+            adminId,
+        });
+
+        if (!group) {
+            return res.status(404).json({
+                message: "Group not found or you are not admin of this group",
+            });
+        }
+
+        const durationInYears = group.durationOfGroup;
+
+        if (!durationInYears) {
+            return res.status(400).json({
+                message: "Group duration is not set for this group",
+            });
+        }
+
+        const groupEndDate = new Date(group.createdAt);
+        groupEndDate.setFullYear(groupEndDate.getFullYear() + durationInYears);
+
+        if (new Date() < groupEndDate) {
+            return res.status(400).json({
+                message: "Group duration is not completed yet",
+                groupEndDate,
+            });
+        }
+
+        const member = group.members.find(
+            (m) =>
+            m.userId.toString() === memberId &&
+            m.status === "approved"
+        );
+
+        if (!member) {
+            return res.status(404).json({
+                message: "Approved member not found in this group",
+            });
+        }
+
+        const activeLoan = await Loan.findOne({
+            groupId,
+            userId: memberId,
+            $or: [{
+                    status: "pending",
+                },
+                {
+                    status: "approved",
+                    remainingAmount: { $gt: 0 },
+                },
+            ],
+        });
+
+        if (activeLoan) {
+            return res.status(400).json({
+                message: "Member cannot be removed because loan is pending or remaining loan amount is not zero",
+            });
+        }
+
+        group.members = group.members.filter(
+            (m) => m.userId.toString() !== memberId
+        );
+
+        await group.save();
+
+        await User.findByIdAndUpdate(memberId, {
+            $pull: { groupIds: group._id },
+        });
+
+        res.status(200).json({
+            message: "Member removed from group successfully",
+            groupId: group._id,
+            removedMemberId: memberId,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+        });
+    }
+};
 module.exports = {
     registerAdmin,
     addMember,
@@ -625,5 +711,6 @@ module.exports = {
     updatePaymentDetails,
     getAdminMemberProfile,
     getAdminPaymentDashboard,
-    updateUpiId
+    updateUpiId,
+    removeMemberFromGroup
 };

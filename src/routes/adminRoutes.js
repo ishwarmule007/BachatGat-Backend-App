@@ -8,7 +8,8 @@ const {
     getAdminProfile,
     updatePaymentDetails,
     getAdminMemberProfile,
-    updateUpiId
+    updateUpiId,
+    removeMemberFromGroup
 } = require("../controllers/adminController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -40,6 +41,7 @@ router.get(
 router.patch(
     "/upi-id",
     authMiddleware,
+    adminMiddleware,
     updateUpiId);
 router.post(
     "/create-group",
@@ -62,6 +64,13 @@ router.get(
     authMiddleware,
     adminMiddleware,
     getAdminMemberProfile
+);
+
+router.delete(
+    "/groups/:groupCode/members/:memberId",
+    authMiddleware,
+    adminMiddleware,
+    removeMemberFromGroup
 );
 
 module.exports = router;
