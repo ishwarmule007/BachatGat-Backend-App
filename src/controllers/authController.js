@@ -102,6 +102,33 @@ const sendOTP = async(req, res) => {
 };
 
 
+const getMyProfile = async(req, res) => {
+    try {
+        const user = await User.findById(req.user._id).select(
+            "fullName mobileNumber emailAddress profilePicture roleSelection prefferedLanguage"
+        );
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found",
+            });
+        }
+
+        res.status(200).json({
+            message: "Profile fetched successfully",
+            user: {
+                ...user.toObject(),
+                preferredLanguage: user.prefferedLanguage,
+            },
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+        });
+    }
+};
+
 const verifyOTP = async(req, res) => {
     try {
         const { mobileNumber, otp, purpose } = req.body;
@@ -205,5 +232,6 @@ module.exports = {
     passwordlogin,
     sendOTP,
     verifyOTP,
+    getMyProfile,
     forgetPassword
 }
