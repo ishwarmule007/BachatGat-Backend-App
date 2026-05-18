@@ -198,7 +198,7 @@ exports.getAdminPaymentRequests = async (req, res) => {
     const adminId = req.user._id;
 
     const requests = await PaymentRequest.find({ adminId })
-      .populate("memberId", "fullName mobileNumber profilePicture")
+      .populate("userId", "fullName mobileNumber profilePicture")
       .populate("groupId", "groupName groupCode")
       .sort({ createdAt: -1 });
 
