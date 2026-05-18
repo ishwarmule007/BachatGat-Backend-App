@@ -52,10 +52,9 @@ router.get(
     getPaymentRequestDetail
 );
 router.patch(
-    "/admin/requests/:requestId/status",
+    "/update-payment-request-status",
     authMiddleware,
     adminMiddleware,
     updatePaymentRequestStatus
 );
-
 module.exports = router;
