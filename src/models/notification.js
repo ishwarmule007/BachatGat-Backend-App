@@ -30,10 +30,11 @@ const notificationSchema = new mongoose.Schema({
             "member_approved",
             "member_rejected",
             "announcement",
+
             "payment_request_received",
             "payment_request_sent",
-            "payment_request_accepted",
-            "payment_request_rejected"
+            "payment_accepted",
+            "payment_rejected"
         ],
         required: true
     },
