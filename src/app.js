@@ -1,5 +1,7 @@
 const express = require('express');
 const app = express();
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./utils/swagger");
 const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
@@ -22,5 +24,6 @@ app.use("/api/announcements", announcementRoutes);
 app.get('/not_sleep', (req, res) => {
     res.status(200).json({ message: "Server is awake" });
 });
+app.use("/api-documentation", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 module.exports = app;

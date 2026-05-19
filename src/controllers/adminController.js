@@ -464,7 +464,7 @@ const getAdminMemberProfile = async(req, res) => {
         }
 
         const member = await User.findById(memberId).select(
-            "fullName mobileNumber address dateofBirth profilePicture"
+            "fullName mobileNumber address dateOfBirth profilePicture"
         );
 
         if (!member) {
@@ -519,7 +519,7 @@ const getAdminMemberProfile = async(req, res) => {
                 fullName: member.fullName,
                 mobileNumber: member.mobileNumber,
                 address: member.address || null,
-                dateOfBirth: member.dateofBirth || null,
+                dateOfBirth: member.dateOfBirth || null,
                 profilePicture: member.profilePicture || null,
 
                 memberSince: memberExists.joinedAt || null,

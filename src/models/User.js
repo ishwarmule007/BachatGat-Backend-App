@@ -56,6 +56,12 @@ const userSchema = new mongoose.Schema({
     groupIds: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Group"
-    }]
-}, { timestamps: true });
+    }],
+    address: {
+        type: String,
+        default: null
+    }
+}, {
+    timestamps: true
+});
 module.exports = mongoose.model('User', userSchema);
