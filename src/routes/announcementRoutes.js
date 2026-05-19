@@ -84,6 +84,54 @@ router.post("/:groupId", authMiddleware, createAnnouncement);
  *     responses:
  *       200:
  *         description: Announcements fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Announcements fetched successfully"
+ *                 announcements:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "665c1f9a2b7d8f1234567890"
+ *                       title:
+ *                         type: string
+ *                         example: "Monthly Meeting"
+ *                       message:
+ *                         type: string
+ *                         example: "Meeting will be held on Sunday at 5 PM"
+ *                       type:
+ *                         type: string
+ *                         example: "meeting"
+ *                       meetingDate:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                       reminderDate:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                       isPinned:
+ *                         type: boolean
+ *                         example: true
+ *                       groupId:
+ *                         type: string
+ *                         example: "665c1f9a2b7d8f1234567890"
+ *                       adminId:
+ *                         type: string
+ *                         example: "665c1f9a2b7d8f1234567891"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
  *       401:
  *         description: Unauthorized - Token missing or invalid
  *       403:

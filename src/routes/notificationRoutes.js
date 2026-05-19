@@ -20,6 +20,50 @@ const {
  *     responses:
  *       200:
  *         description: Notifications fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Notifications fetched successfully"
+ *                 notifications:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "665c1f9a2b7d8f1234567890"
+ *                       title:
+ *                         type: string
+ *                         example: "Payment accepted"
+ *                       message:
+ *                         type: string
+ *                         example: "Your payment of ₹500 has been accepted"
+ *                       type:
+ *                         type: string
+ *                         example: "payment_accepted"
+ *                       isRead:
+ *                         type: boolean
+ *                         example: false
+ *                       groupId:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           groupName:
+ *                             type: string
+ *                             example: "Shivaji Group"
+ *                           groupCode:
+ *                             type: string
+ *                             example: "SBG-001"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
  *       401:
  *         description: Unauthorized - Token missing or invalid
  *       500:

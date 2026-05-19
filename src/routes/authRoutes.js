@@ -167,6 +167,32 @@ router.post('/forget-password', forgetPassword);
  *     responses:
  *       200:
  *         description: Profile fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Profile fetched successfully"
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "665c1f9a2b7d8f1234567890"
+ *                     fullName:
+ *                       type: string
+ *                       example: "Atharv Saraf"
+ *                     mobileNumber:
+ *                       type: string
+ *                       example: "9876543210"
+ *                     roleSelection:
+ *                       type: string
+ *                       example: "admin"
+ *                     preferredLanguage:
+ *                       type: string
+ *                       example: "english"
  *       401:
  *         description: Unauthorized - Token missing or invalid
  *       404:

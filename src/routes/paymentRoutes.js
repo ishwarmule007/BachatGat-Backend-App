@@ -70,6 +70,7 @@ router.post(
     createPaymentRequest
 );
 
+
 /**
  * @swagger
  * /api/payment/member/{groupCode}:
@@ -88,8 +89,52 @@ router.post(
  *     responses:
  *       200:
  *         description: Member payment page fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Member payment page fetched successfully"
+ *                 paymentPage:
+ *                   type: object
+ *                   properties:
+ *                     group:
+ *                       type: object
+ *                       properties:
+ *                         groupId:
+ *                           type: string
+ *                           example: "665c1f9a2b7d8f1234567890"
+ *                         groupName:
+ *                           type: string
+ *                           example: "Developer Group"
+ *                         groupCode:
+ *                           type: string
+ *                           example: "SBG-001"
+ *                     amount:
+ *                       type: number
+ *                       example: 500
+ *                     ownerAccount:
+ *                       type: object
+ *                       properties:
+ *                         adminName:
+ *                           type: string
+ *                           example: "Atharv Saraf"
+ *                         mobileNumber:
+ *                           type: string
+ *                           example: "9876543210"
+ *                         upiId:
+ *                           type: string
+ *                           example: "atharv@upi"
+ *                     upiLink:
+ *                       type: string
+ *                       example: "upi://pay?pa=atharv@upi"
  *       400:
- *         description: Admin UPI ID missing
+ *         description: Admin has not added UPI ID yet
  *       401:
  *         description: Unauthorized - Token missing or invalid
  *       403:
@@ -116,6 +161,49 @@ router.get(
  *     responses:
  *       200:
  *         description: Payment history fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Payment history fetched successfully"
+ *                 payments:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "665c1f9a2b7d8f1234567890"
+ *                       amount:
+ *                         type: number
+ *                         example: 500
+ *                       month:
+ *                         type: string
+ *                         example: "2026-05"
+ *                       status:
+ *                         type: string
+ *                         example: "accepted"
+ *                       screenshotUrl:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/demo/image.jpg"
+ *                       groupId:
+ *                         type: object
+ *                         properties:
+ *                           groupName:
+ *                             type: string
+ *                             example: "Developer Group"
+ *                           groupCode:
+ *                             type: string
+ *                             example: "SBG-001"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
  *       401:
  *         description: Unauthorized - Token missing or invalid
  *       500:
@@ -138,6 +226,53 @@ router.get(
  *     responses:
  *       200:
  *         description: Payment requests fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Payment requests fetched successfully"
+ *                 counts:
+ *                   type: object
+ *                   properties:
+ *                     all:
+ *                       type: number
+ *                       example: 10
+ *                     pending:
+ *                       type: number
+ *                       example: 2
+ *                     accepted:
+ *                       type: number
+ *                       example: 6
+ *                     rejected:
+ *                       type: number
+ *                       example: 2
+ *                 requests:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       requestId:
+ *                         type: string
+ *                       memberName:
+ *                         type: string
+ *                         example: "Rahul Sharma"
+ *                       groupName:
+ *                         type: string
+ *                         example: "Developer Group"
+ *                       amount:
+ *                         type: number
+ *                         example: 500
+ *                       month:
+ *                         type: string
+ *                         example: "2026-05"
+ *                       status:
+ *                         type: string
+ *                         example: "pending"
+ *                       screenshotUrl:
+ *                         type: string
  *       401:
  *         description: Unauthorized - Token missing or invalid
  *       403:
@@ -163,6 +298,23 @@ router.get(
  *     responses:
  *       200:
  *         description: Admin payment dashboard fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalReceivableThisMonth:
+ *                   type: number
+ *                   example: 25000
+ *                 receivedThisMonth:
+ *                   type: number
+ *                   example: 18000
+ *                 pendingPayments:
+ *                   type: number
+ *                   example: 7
+ *                 completedPayments:
+ *                   type: number
+ *                   example: 20
  *       401:
  *         description: Unauthorized - Token missing or invalid
  *       403:
@@ -195,6 +347,39 @@ router.get(
  *     responses:
  *       200:
  *         description: Payment request detail fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Payment request detail fetched successfully"
+ *                 request:
+ *                   type: object
+ *                   properties:
+ *                     amount:
+ *                       type: number
+ *                       example: 500
+ *                     month:
+ *                       type: string
+ *                       example: "2026-05"
+ *                     status:
+ *                       type: string
+ *                       example: "accepted"
+ *                     rejectionReason:
+ *                       type: string
+ *                       nullable: true
+ *                     screenshotUrl:
+ *                       type: string
+ *                     acceptedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     rejectedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
  *       401:
  *         description: Unauthorized - Token missing or invalid
  *       403:
@@ -211,6 +396,79 @@ router.get(
     getPaymentRequestDetail
 );
 
+/**
+ * @swagger
+ * /api/payment/generate-payment-link/{groupId}:
+ *   get:
+ *     summary: Generate contribution payment deep link
+ *     tags: [Payment]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: groupId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "665c1f9a2b7d8f1234567890"
+ *     responses:
+ *       200:
+ *         description: Payment page data fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Payment page data fetched successfully"
+ *                 group:
+ *                   type: object
+ *                   properties:
+ *                     groupId:
+ *                       type: string
+ *                     groupName:
+ *                       type: string
+ *                 amountDetails:
+ *                   type: object
+ *                   properties:
+ *                     amount:
+ *                       type: number
+ *                       example: 500
+ *                     month:
+ *                       type: string
+ *                       example: "2026-05"
+ *                 ownerAccount:
+ *                   type: object
+ *                   properties:
+ *                     adminName:
+ *                       type: string
+ *                       example: "Atharv Saraf"
+ *                     upiId:
+ *                       type: string
+ *                       example: "atharv@upi"
+ *                 paymentDetails:
+ *                   type: object
+ *                   properties:
+ *                     upiDeepLink:
+ *                       type: string
+ *                       example: "upi://pay?pa=atharv@upi"
+ *       400:
+ *         description: Admin UPI ID not found
+ *       401:
+ *         description: Unauthorized - Token missing or invalid
+ *       403:
+ *         description: User is not a member of this group
+ *       404:
+ *         description: Group not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get(
+    "/generate-payment-link/:groupId",
+    authMiddleware,
+    generateContributionPaymentLink
+);
 /**
  * @swagger
  * /api/payment/update-payment-request-status:
@@ -260,38 +518,4 @@ router.patch(
     updatePaymentRequestStatus
 );
 
-/**
- * @swagger
- * /api/payment/generate-payment-link/{groupId}:
- *   get:
- *     summary: Generate UPI payment deep link
- *     tags: [Payment]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: groupId
- *         required: true
- *         schema:
- *           type: string
- *         example: "665c1f9a2b7d8f1234567890"
- *     responses:
- *       200:
- *         description: Payment link generated successfully
- *       400:
- *         description: Admin UPI ID missing
- *       401:
- *         description: Unauthorized - Token missing or invalid
- *       403:
- *         description: User is not member of this group
- *       404:
- *         description: Group not found
- *       500:
- *         description: Internal server error
- */
-router.get(
-    "/generate-payment-link/:groupId",
-    authMiddleware,
-    generateContributionPaymentLink
-);
 module.exports = router;
