@@ -9,7 +9,8 @@ const {
     updatePaymentDetails,
     getAdminMemberProfile,
     updateUpiId,
-    removeMemberFromGroup
+    removeMemberFromGroup,
+    getGroupsWithMembers
 } = require("../controllers/adminController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -544,5 +545,10 @@ router.delete(
     adminMiddleware,
     removeMemberFromGroup
 );
-
+router.get(
+    "/groups-members",
+    authMiddleware,
+    adminMiddleware,
+    getGroupsWithMembers
+);
 module.exports = router;

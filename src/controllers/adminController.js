@@ -723,6 +723,60 @@ const removeMemberFromGroup = async(req, res) => {
         });
     }
 };
+
+const getGroupsWithMembers = async(req, res) => {
+    try {
+        const adminId = req.user._id;
+
+        const groups = await Group.find({ adminId })
+            .populate("members.userId", "fullName mobileNumber profilePicture");
+
+        const result = groups.map((group) => {
+            const activeMembers = [];
+            const pendingMembers = [];
+
+            group.members.forEach((member) => {
+                const memberData = {
+                    memberId: member.userId ? member.userId._id : null,
+                    fullName: member.userId ? member.userId.fullName || "Unknown" : "",
+                    mobileNumber: member.userId ? member.userId.mobileNumber || "" : "",
+                    profilePicture: member.userId ? member.userId.profilePicture || "" : "",
+                    membershipId: member.membershipId || "",
+                    status: member.status,
+                };
+
+                if (member.status === "approved") {
+                    activeMembers.push(memberData);
+                }
+
+                if (member.status === "pending") {
+                    pendingMembers.push(memberData);
+                }
+            });
+
+            return {
+                groupId: group._id,
+                groupName: group.groupName,
+                groupCode: group.groupCode,
+                totalMembers: group.members.length,
+                activeCount: activeMembers.length,
+                pendingCount: pendingMembers.length,
+                activeMembers,
+                pendingMembers,
+            };
+        });
+
+        res.status(200).json({
+            message: "Groups with members fetched successfully",
+            groups: result,
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+        });
+    }
+};
 module.exports = {
     registerAdmin,
     addMember,
@@ -733,5 +787,6 @@ module.exports = {
     getAdminMemberProfile,
     getAdminPaymentDashboard,
     updateUpiId,
-    removeMemberFromGroup
+    removeMemberFromGroup,
+    getGroupsWithMembers
 };
