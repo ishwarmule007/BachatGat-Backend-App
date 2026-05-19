@@ -66,13 +66,69 @@ router.post(
  * @swagger
  * /api/admin/profile:
  *   get:
- *     summary: Get admin profile and overview
+ *     summary: Get admin profile and dashboard overview
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Admin profile fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 adminProfile:
+ *                   type: object
+ *                   properties:
+ *                     fullName:
+ *                       type: string
+ *                       example: "Atharv Saraf"
+ *                     mobileNumber:
+ *                       type: string
+ *                       example: "9876543210"
+ *                     role:
+ *                       type: string
+ *                       example: "admin"
+ *                     profilePicture:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "https://example.com/profile.jpg"
+ *                     upiId:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "atharv@upi"
+ *                     bankAccount:
+ *                       type: object
+ *                       nullable: true
+ *                       properties:
+ *                         accountHolderName:
+ *                           type: string
+ *                           example: "Atharv Saraf"
+ *                         bankName:
+ *                           type: string
+ *                           example: "State Bank of India"
+ *                         accountNumber:
+ *                           type: string
+ *                           example: "1234567890"
+ *                         ifscCode:
+ *                           type: string
+ *                           example: "SBIN0001234"
+ *                     overview:
+ *                       type: object
+ *                       properties:
+ *                         totalGroups:
+ *                           type: number
+ *                           example: 5
+ *                         totalMembers:
+ *                           type: number
+ *                           example: 42
+ *                         totalCollection:
+ *                           type: number
+ *                           example: 150000
  *       401:
  *         description: Unauthorized - Token missing or invalid
  *       403:
@@ -140,13 +196,33 @@ router.put(
  * @swagger
  * /api/admin/dashboard-overview:
  *   get:
- *     summary: Get admin dashboard overview
+ *     summary: Get admin dashboard overview statistics
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Admin dashboard overview fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Admin dashboard overview fetched successfully"
+ *                 totalGroups:
+ *                   type: number
+ *                   example: 5
+ *                 totalMembers:
+ *                   type: number
+ *                   example: 42
+ *                 pendingMembers:
+ *                   type: number
+ *                   example: 6
+ *                 approvedMembers:
+ *                   type: number
+ *                   example: 36
  *       401:
  *         description: Unauthorized - Token missing or invalid
  *       403:
@@ -340,7 +416,7 @@ router.post(
  * @swagger
  * /api/admin/groups/{groupCode}/members/{memberId}:
  *   get:
- *     summary: Get detailed profile of a group member
+ *     summary: Get detailed profile of a member in a group
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -360,6 +436,58 @@ router.post(
  *     responses:
  *       200:
  *         description: Member profile fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 memberProfile:
+ *                   type: object
+ *                   properties:
+ *                     memberId:
+ *                       type: string
+ *                       example: "665c1f9a2b7d8f1234567890"
+ *                     fullName:
+ *                       type: string
+ *                       example: "Rahul Sharma"
+ *                     mobileNumber:
+ *                       type: string
+ *                       example: "9876543210"
+ *                     address:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "Nashik, Maharashtra"
+ *                     dateOfBirth:
+ *                       type: string
+ *                       format: date
+ *                       nullable: true
+ *                       example: "2000-05-19"
+ *                     profilePicture:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "https://example.com/profile.jpg"
+ *                     memberSince:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                     contributionSummary:
+ *                       type: object
+ *                       properties:
+ *                         totalContribution:
+ *                           type: number
+ *                           example: 15000
+ *                     loanSummary:
+ *                       type: object
+ *                       properties:
+ *                         loanTaken:
+ *                           type: number
+ *                           example: 5000
+ *                         loanRemaining:
+ *                           type: number
+ *                           example: 2000
  *       401:
  *         description: Unauthorized - Token missing or invalid
  *       403:
