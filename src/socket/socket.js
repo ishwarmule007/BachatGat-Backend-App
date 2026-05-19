@@ -99,28 +99,28 @@ const initializeSocket = (server) => {
                 });
             }
         });
-
         socket.on("sendMessage", async(data) => {
             try {
                 const groupCode = data && data.groupCode;
                 const message = data && data.message;
                 const messageType = data && data.messageType;
+                const replyTo = data && data.replyTo;
 
                 const cleanGroupCode = String(groupCode || "").trim();
 
                 if (!cleanGroupCode || !message) {
                     return socket.emit("errorMessage", {
-                        message: "groupCode and message are required"
+                        message: "groupCode and message are required",
                     });
                 }
 
                 const group = await Group.findOne({
-                    groupCode: cleanGroupCode
+                    groupCode: cleanGroupCode,
                 });
 
                 if (!group) {
                     return socket.emit("errorMessage", {
-                        message: "Group not found"
+                        message: "Group not found",
                     });
                 }
 
@@ -133,8 +133,36 @@ const initializeSocket = (server) => {
 
                 if (!isApprovedMember) {
                     return socket.emit("errorMessage", {
-                        message: "You are not approved member of this group"
+                        message: "You are not approved member of this group",
                     });
+                }
+
+                let replyData = {
+                    messageId: null,
+                    message: "",
+                    senderName: "",
+                    messageType: "text",
+                };
+
+                if (replyTo) {
+                    const oldMessage = await Message.findOne({
+                        _id: replyTo,
+                        groupId: group._id,
+                    }).populate("senderId", "fullName");
+
+                    if (!oldMessage) {
+                        return socket.emit("errorMessage", {
+                            message: "Reply message not found in this group",
+                        });
+                    }
+
+                    replyData = {
+                        messageId: oldMessage._id,
+                        message: oldMessage.isDeleted ?
+                            "This message was deleted" : oldMessage.message,
+                        senderName: oldMessage.senderId ? oldMessage.senderId.fullName || "Unknown" : "Unknown",
+                        messageType: oldMessage.messageType || "text",
+                    };
                 }
 
                 const newMessage = await Message.create({
@@ -142,20 +170,23 @@ const initializeSocket = (server) => {
                     senderId: socket.user._id,
                     messageType: messageType || "text",
                     message,
+                    replyTo: replyData,
                     readBy: [{
-                        userId: socket.user._id
-                    }]
+                        userId: socket.user._id,
+                    }, ],
                 });
 
-                const populatedMessage = await Message.findById(newMessage._id)
-                    .populate("senderId", "fullName mobileNumber roleSelection");
+                const populatedMessage = await Message.findById(newMessage._id).populate(
+                    "senderId",
+                    "fullName mobileNumber roleSelection"
+                );
 
                 socket.join(cleanGroupCode);
 
                 io.to(cleanGroupCode).emit("receiveMessage", populatedMessage);
             } catch (error) {
                 socket.emit("errorMessage", {
-                    message: error.message
+                    message: error.message,
                 });
             }
         });

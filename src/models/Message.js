@@ -49,7 +49,11 @@ const messageSchema = new mongoose.Schema({
         ref: "User",
         default: null
     },
-
+    replyTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Message",
+        default: null
+    },
     deletedAt: {
         type: Date,
         default: null
