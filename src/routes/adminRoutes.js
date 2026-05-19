@@ -10,7 +10,8 @@ const {
     getAdminMemberProfile,
     updateUpiId,
     removeMemberFromGroup,
-    getGroupsWithMembers
+    getGroupsWithMembers,
+    deleteGroupByAdmin
 } = require("../controllers/adminController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -545,10 +546,161 @@ router.delete(
     adminMiddleware,
     removeMemberFromGroup
 );
+/**
+ * @swagger
+ * /api/admin/groups-members:
+ *   get:
+ *     summary: Get all groups with active and pending members
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Groups with members fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Groups with members fetched successfully
+ *
+ *                 groups:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       groupId:
+ *                         type: string
+ *                         example: 682ab72a92ab21f1f0f8d111
+ *
+ *                       groupName:
+ *                         type: string
+ *                         example: Shivneri Mahila Gat
+ *
+ *                       groupCode:
+ *                         type: string
+ *                         example: SHV-01
+ *
+ *                       totalMembers:
+ *                         type: number
+ *                         example: 18
+ *
+ *                       activeCount:
+ *                         type: number
+ *                         example: 15
+ *
+ *                       pendingCount:
+ *                         type: number
+ *                         example: 3
+ *
+ *                       activeMembers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             memberId:
+ *                               type: string
+ *                               example: 682ab72a92ab21f1f0f8d222
+ *
+ *                             fullName:
+ *                               type: string
+ *                               example: Anita Shinde
+ *
+ *                             mobileNumber:
+ *                               type: string
+ *                               example: "9876543210"
+ *
+ *                             profilePicture:
+ *                               type: string
+ *                               example: https://example.com/profile.jpg
+ *
+ *                             membershipId:
+ *                               type: string
+ *                               example: MBG0021
+ *
+ *                             status:
+ *                               type: string
+ *                               example: approved
+ *
+ *                       pendingMembers:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             memberId:
+ *                               type: string
+ *                               example: 682ab72a92ab21f1f0f8d333
+ *
+ *                             fullName:
+ *                               type: string
+ *                               example: Sunita More
+ *
+ *                             mobileNumber:
+ *                               type: string
+ *                               example: "9876543211"
+ *
+ *                             profilePicture:
+ *                               type: string
+ *                               example: https://example.com/profile.jpg
+ *
+ *                             membershipId:
+ *                               type: string
+ *                               example: MBG0022
+ *
+ *                             status:
+ *                               type: string
+ *                               example: pending
+ *
+ *       401:
+ *         description: Unauthorized or token missing
+ *
+ *       403:
+ *         description: Admin access required
+ *
+ *       500:
+ *         description: Server error
+ */
 router.get(
     "/groups-members",
     authMiddleware,
     adminMiddleware,
     getGroupsWithMembers
+);
+/**
+ * @swagger
+ * /api/admin/groups/{groupId}:
+ *   delete:
+ *     summary: Delete group by admin if no active loan remains
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: groupId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: MongoDB group ID
+ *     responses:
+ *       200:
+ *         description: Group deleted successfully
+ *       400:
+ *         description: Group cannot be deleted because active loan still exists
+ *       401:
+ *         description: Unauthorized or token missing
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Group not found or unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.delete(
+    "/groups/:groupId",
+    authMiddleware,
+    adminMiddleware,
+    deleteGroupByAdmin
 );
 module.exports = router;

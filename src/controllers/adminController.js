@@ -777,6 +777,51 @@ const getGroupsWithMembers = async(req, res) => {
         });
     }
 };
+
+const deleteGroupByAdmin = async(req, res) => {
+    try {
+        const adminId = req.user._id;
+        const { groupId } = req.params;
+        const group = await Group.findOne({
+            _id: groupId,
+            adminId,
+        });
+
+        if (!group) {
+            return res.status(404).json({
+                message: "Group not found or unauthorized",
+            });
+        }
+        const activeLoan = await Loan.findOne({
+            groupId,
+            status: { $in: ["approved", "active"] },
+        });
+
+        if (activeLoan) {
+            return res.status(400).json({
+                message: "Group cannot be deleted because active loan still exists",
+            });
+        }
+        await User.updateMany({
+            groupIds: groupId,
+        }, {
+            $pull: {
+                groupIds: groupId,
+            },
+        });
+
+        await Group.findByIdAndDelete(groupId);
+
+        return res.status(200).json({
+            message: "Group deleted successfully",
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            message: error.message,
+        });
+    }
+};
 module.exports = {
     registerAdmin,
     addMember,
@@ -788,5 +833,6 @@ module.exports = {
     getAdminPaymentDashboard,
     updateUpiId,
     removeMemberFromGroup,
-    getGroupsWithMembers
+    getGroupsWithMembers,
+    deleteGroupByAdmin
 };
