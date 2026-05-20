@@ -7,10 +7,10 @@ const authMiddleware = require("../middlewares/authMiddleware");
 
 /**
  * @swagger
- * /api/user/update-language:
+ * /api/common/update-language:
  *   put:
  *     summary: Update preferred language of user
- *     tags: [User]
+ *     tags: [Common]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -44,10 +44,10 @@ router.put(
 
 /**
  * @swagger
- * /api/user/groups/{groupCode}/members:
+ * /api/common/groups/{groupCode}/members:
  *   get:
  *     summary: Get all members of a group
- *     tags: [User]
+ *     tags: [Common]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -100,10 +100,10 @@ router.get(
 
 /**
  * @swagger
- * /api/user/groups/{groupCode}/details:
+ * /api/common/groups/{groupCode}/details:
  *   get:
  *     summary: Get detailed information of a group
- *     tags: [User]
+ *     tags: [Common]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -204,10 +204,10 @@ router.get(
 
 /**
  * @swagger
- * /api/user/my-groups:
+ * /api/common/my-groups:
  *   get:
  *     summary: Get all groups of logged in user
- *     tags: [User]
+ *     tags: [Common]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -270,10 +270,10 @@ router.get(
 
 /**
  * @swagger
- * /api/user/logout:
+ * /api/common/logout:
  *   post:
  *     summary: Logout current user
- *     tags: [User]
+ *     tags: [Common]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -291,11 +291,11 @@ router.post(
 );
 /**
  * @swagger
- * /api/chat/groups/{groupId}/star:
+ * /api/common/groups/{groupId}/star:
  *   patch:
  *     summary: Star a group
- *     tags:
- *       - Chat Groups
+ *     tags:[Common]
+ *
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -327,11 +327,10 @@ router.patch(
 
 /**
  * @swagger
- * /api/chat/groups/{groupId}/unstar:
+ * /api/common/groups/{groupId}/unstar:
  *   patch:
  *     summary: Unstar a group
- *     tags:
- *       - Chat Groups
+ *     tags:[Common]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -363,11 +362,10 @@ router.patch(
 
 /**
  * @swagger
- * /api/chat/groups/{groupId}/archive:
+ * /api/common/groups/{groupId}/archive:
  *   patch:
  *     summary: Archive a group
- *     tags:
- *       - Chat Groups
+ *    tags:[Common]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -402,8 +400,7 @@ router.patch(
  * /api/chat/groups/{groupId}/unarchive:
  *   patch:
  *     summary: Unarchive a group
- *     tags:
- *       - Chat Groups
+ *     tags:[Common]
  *     security:
  *       - bearerAuth: []
  *     parameters:
