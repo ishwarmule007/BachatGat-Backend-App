@@ -1,7 +1,8 @@
 const express = require("express");
 
 const {
-    getGroupMessages
+    getGroupMessages,
+    clearChatForMe
 } = require("../controllers/chatController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -176,4 +177,61 @@ router.get("/socket_events_documentation", (req, res) => {
     });
 });
 
+/**
+ * @swagger
+ * /api/chat/groups/{groupCode}/clear-chat:
+ *   delete:
+ *     summary: Clear group chat for current user
+ *     description: |
+ *       This API clears the group chat only for the logged in user.
+ *       Messages are not deleted from database.
+ *       Other group members will still see old messages.
+ *       After clearing, user will only receive new messages sent after clear time.
+ *     tags:
+ *       - Chat
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: groupCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Group code of the chat
+ *     responses:
+ *       200:
+ *         description: Chat cleared successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Chat cleared for you successfully
+ *                 groupCode:
+ *                   type: string
+ *                   example: Atharv-01
+ *                 groupId:
+ *                   type: string
+ *                   example: 6a044f5869932cd638df0f73
+ *                 clearedAt:
+ *                   type: string
+ *                   format: date-time
+ *                   example: 2026-05-20T10:30:00.000Z
+ *
+ *       403:
+ *         description: User is not approved member
+ *
+ *       404:
+ *         description: Group not found
+ *
+ *       500:
+ *         description: Internal server error
+ */
+router.delete(
+    "/groups/:groupCode/clear-chat",
+    authMiddleware,
+    clearChatForMe
+);
 module.exports = router;
