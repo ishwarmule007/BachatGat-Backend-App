@@ -373,6 +373,138 @@ const initializeSocket = (server) => {
             }
         });
 
+        socket.on("reactMessage", async(data) => {
+            try {
+                const messageId = data && data.messageId;
+                const emoji = data && data.emoji;
+
+                if (!messageId || !emoji) {
+                    return socket.emit("errorMessage", {
+                        message: "messageId and emoji are required"
+                    });
+                }
+
+                const message = await Message.findById(messageId);
+
+                if (!message) {
+                    return socket.emit("errorMessage", {
+                        message: "Message not found"
+                    });
+                }
+
+                const group = await Group.findById(message.groupId);
+
+                if (!group) {
+                    return socket.emit("errorMessage", {
+                        message: "Group not found"
+                    });
+                }
+
+                const isApprovedMember = group.members.some(
+                    (m) =>
+                    m.userId &&
+                    m.userId.toString() === socket.user._id.toString() &&
+                    m.status === "approved"
+                );
+
+                if (!isApprovedMember) {
+                    return socket.emit("errorMessage", {
+                        message: "You are not approved member of this group"
+                    });
+                }
+
+                const existingReactionIndex = message.reactions.findIndex(
+                    (reaction) =>
+                    reaction.userId.toString() === socket.user._id.toString()
+                );
+
+                if (existingReactionIndex !== -1) {
+                    message.reactions[existingReactionIndex].emoji = emoji;
+                    message.reactions[existingReactionIndex].reactedAt = new Date();
+                } else {
+                    message.reactions.push({
+                        userId: socket.user._id,
+                        emoji
+                    });
+                }
+
+                await message.save();
+
+                const updatedMessage = await Message.findById(message._id)
+                    .populate("senderId", "fullName mobileNumber roleSelection")
+                    .populate("reactions.userId", "fullName mobileNumber roleSelection");
+
+                io.to(group.groupCode).emit("messageReacted", {
+                    groupCode: group.groupCode,
+                    messageId: message._id,
+                    reactions: updatedMessage.reactions
+                });
+            } catch (error) {
+                socket.emit("errorMessage", {
+                    message: error.message
+                });
+            }
+        });
+        socket.on("removeReaction", async(data) => {
+            try {
+                const messageId = data && data.messageId;
+
+                if (!messageId) {
+                    return socket.emit("errorMessage", {
+                        message: "messageId is required"
+                    });
+                }
+
+                const message = await Message.findById(messageId);
+
+                if (!message) {
+                    return socket.emit("errorMessage", {
+                        message: "Message not found"
+                    });
+                }
+
+                const group = await Group.findById(message.groupId);
+
+                if (!group) {
+                    return socket.emit("errorMessage", {
+                        message: "Group not found"
+                    });
+                }
+
+                const isApprovedMember = group.members.some(
+                    (m) =>
+                    m.userId &&
+                    m.userId.toString() === socket.user._id.toString() &&
+                    m.status === "approved"
+                );
+
+                if (!isApprovedMember) {
+                    return socket.emit("errorMessage", {
+                        message: "You are not approved member of this group"
+                    });
+                }
+
+                message.reactions = message.reactions.filter(
+                    (reaction) =>
+                    reaction.userId.toString() !== socket.user._id.toString()
+                );
+
+                await message.save();
+
+                const updatedMessage = await Message.findById(message._id)
+                    .populate("reactions.userId", "fullName mobileNumber roleSelection");
+
+                io.to(group.groupCode).emit("messageReactionRemoved", {
+                    groupCode: group.groupCode,
+                    messageId: message._id,
+                    reactions: updatedMessage.reactions
+                });
+            } catch (error) {
+                socket.emit("errorMessage", {
+                    message: error.message
+                });
+            }
+        });
         socket.on("disconnect", () => {
             console.log("User disconnected:", socket.user.fullName);
         });
