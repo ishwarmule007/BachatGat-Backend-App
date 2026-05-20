@@ -294,7 +294,7 @@ router.post(
  * /api/common/groups/{groupId}/star:
  *   patch:
  *     summary: Star a group
- *     tags:[Common]
+ *     tags: [Common]
  *
  *     security:
  *       - bearerAuth: []
@@ -330,7 +330,7 @@ router.patch(
  * /api/common/groups/{groupId}/unstar:
  *   patch:
  *     summary: Unstar a group
- *     tags:[Common]
+ *     tags: [Common]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -365,7 +365,7 @@ router.patch(
  * /api/common/groups/{groupId}/archive:
  *   patch:
  *     summary: Archive a group
- *    tags:[Common]
+ *     tags: [Common]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -397,10 +397,10 @@ router.patch(
 
 /**
  * @swagger
- * /api/chat/groups/{groupId}/unarchive:
+ * /api/common/groups/{groupId}/unarchive:
  *   patch:
  *     summary: Unarchive a group
- *     tags:[Common]
+ *     tags: [Common]
  *     security:
  *       - bearerAuth: []
  *     parameters:
