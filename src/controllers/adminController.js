@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const generateToken = require('../utils/generateToken');
 const Loan = require('../models/Loan');
 const Contribution = require('../models/contribution');
+const PaymentRequest = require('../models/PaymentRequest');
 const geocodeAddress = require("../utils/geocodeAddress");
 const sendSMS = require("../utils/sendSMS");
 
@@ -116,7 +117,8 @@ const getAdminDashboardOverview = async(req, res) => {
 const updatePaymentDetails = async(req, res) => {
     try {
         const {
-            upiId,
+            accountType,
+            mobileNumberRegisteredWithBank,
             accountHolderName,
             accountNumber,
             ifscCode,
@@ -126,8 +128,8 @@ const updatePaymentDetails = async(req, res) => {
         const admin = await User.findByIdAndUpdate(
             req.user._id, {
                 $set: {
-                    upiId: upiId,
-
+                    "bankAccountDetails.accountType": accountType,
+                    "bankAccountDetails.mobileNumberRegisteredWithBank": mobileNumberRegisteredWithBank,
                     "bankAccountDetails.accountHolderName": accountHolderName,
                     "bankAccountDetails.accountNumber": accountNumber,
                     "bankAccountDetails.ifscCode": ifscCode,
@@ -141,14 +143,57 @@ const updatePaymentDetails = async(req, res) => {
             success: true,
             message: "Payment details updated successfully",
             paymentDetails: {
-                upiId: admin.upiId,
-                bankAccountDetails: admin.bankAccountDetails,
+                "bankAccountDetails.accountType": accountType,
+                "bankAccountDetails.mobileNumberRegisteredWithBank": mobileNumberRegisteredWithBank,
+                "bankAccountDetails.accountHolderName": accountHolderName,
+                "bankAccountDetails.accountNumber": accountNumber,
+                "bankAccountDetails.ifscCode": ifscCode,
+                "bankAccountDetails.bankName": bankName,
             },
         });
     } catch (error) {
         res.status(500).json({
             success: false,
             message: error.message,
+        });
+    }
+};
+const updateUpiId = async(req, res) => {
+    try {
+        const userId = req.user._id || req.user.id;
+        const { upiId } = req.body;
+
+        if (!upiId) {
+            return res.status(400).json({
+                message: "UPI ID is required"
+            });
+        }
+
+        const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
+
+        if (!upiRegex.test(upiId)) {
+            return res.status(400).json({
+                message: "Invalid UPI ID format"
+            });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            userId, { upiId }, { new: true }
+        ).select("fullName mobileNumber upiId");
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "UPI ID updated successfully",
+            user
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message
         });
     }
 };
@@ -164,7 +209,8 @@ const createGroup = async(req, res) => {
             taluka,
             district,
             state,
-            formationDate
+            formationDate,
+            groupDurationInYears
         } = req.body;
         if (!groupName || !groupCode) {
             return res.status(400).json({
@@ -181,6 +227,11 @@ const createGroup = async(req, res) => {
         if (existingCode) {
             return res.status(400).json({
                 message: "Group code already exists"
+            });
+        }
+        if (!village || !taluka || !district || !state || !formationDate) {
+            return res.status(400).json({
+                message: "village, taluka, district, state and formationDate are required"
             });
         }
         const fullAddress =
@@ -208,7 +259,8 @@ const createGroup = async(req, res) => {
                 userId: req.user._id,
                 roleInGroup: "admin",
                 status: "approved"
-            }]
+            }],
+            durationOfGroup: groupDurationInYears || 0
         });
         await newGroup.save();
         if (!req.user.groupIds.includes(newGroup._id)) {
@@ -218,6 +270,7 @@ const createGroup = async(req, res) => {
         res.status(201).json({
             message: "Group created successfully",
             groupId: newGroup._id,
+
             groupName: newGroup.groupName,
             groupCode: newGroup.groupCode
         });
@@ -239,11 +292,12 @@ const addMember = async(req, res) => {
             fullName,
             mobileNumber,
             dateOfBirth,
-            address
+            address,
+            monthlyContributionAmount
         } = req.body;
-        if (!groupCode || !fullName || !mobileNumber || !dateOfBirth || !address) {
+        if (!groupCode || !fullName || !mobileNumber || !dateOfBirth || !address || !monthlyContributionAmount) {
             return res.status(400).json({
-                message: "groupCode, fullName, mobileNumber, dateOfBirth and address are required"
+                message: "groupCode, fullName, mobileNumber, dateOfBirth, address and monthlyContributionAmount are required"
             });
         }
         const group = await Group.findOne({ groupCode });
@@ -298,6 +352,7 @@ const addMember = async(req, res) => {
         }
         group.members.push({
             userId: user._id,
+            monthlyContribution: monthlyContributionAmount,
             roleInGroup: "member",
             status: "pending"
         });
@@ -309,7 +364,7 @@ const addMember = async(req, res) => {
         if (isNewUser) {
             const message = `Hello ${fullName}, you have been added to ${group.groupName}. Your username is your mobile number: ${mobileNumber}, and your password is : ${passkey}. Please login and accept or reject the group request.`;
 
-            await sendSMS(mobileNumber, message);
+            //await sendSMS(mobileNumber, message);
         }
         return res.status(200).json({
             message: isNewUser ?
@@ -319,146 +374,6 @@ const addMember = async(req, res) => {
     } catch (error) {
         return res.status(500).json({
             message: error.message
-        });
-    }
-};
-const getAdminGroups = async(req, res) => {
-    try {
-        const adminId = req.user._id;
-
-        const groups = await Group.find({
-            $or: [
-                { adminId: adminId },
-                { "members.userId": adminId }
-            ]
-        }).sort({ createdAt: -1 });
-
-        const formattedGroups = groups.map((group) => {
-            const approvedMembers = group.members.filter(
-                (member) => member.status === "approved"
-            );
-            return {
-                groupId: group._id,
-                groupName: group.groupName,
-                groupCode: group.groupCode,
-                totalMembers: approvedMembers.length,
-                totalSaving: group.totalSaving || 0,
-                formationDate: group.formationDate,
-                location: group.location
-            };
-        });
-        res.status(200).json({
-            message: "Admin groups fetched successfully",
-            groups: formattedGroups
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: "Failed to fetch admin groups",
-            error: error.message
-        });
-    }
-};
-const getGroupDetails = async(req, res) => {
-    try {
-        const { groupCode } = req.params;
-        const group = await Group.findOne({ groupCode }).populate(
-            "members.userId",
-            "fullName mobileNumber gender role"
-        );
-        if (!group) {
-            return res.status(404).json({
-                message: "Group not found"
-            });
-        }
-        const approvedMembers = group.members.filter(
-            (member) => member.status === "approved"
-        );
-        const pendingMembers = group.members.filter(
-            (member) => member.status === "pending"
-        );
-        const rejectedMembers = group.members.filter(
-            (member) => member.status === "rejected"
-        );
-        res.status(200).json({
-            message: "Group details fetched successfully",
-            group: {
-                groupId: group._id,
-                groupName: group.groupName,
-                groupCode: group.groupCode,
-                description: group.description,
-                formationDate: group.formationDate,
-                totalSaving: group.totalSaving || 0,
-                totalLoanGiven: group.totalLoanGiven || 0,
-                totalMembers: approvedMembers.length,
-                pendingMembers: pendingMembers.length,
-                rejectedMembers: rejectedMembers.length,
-                village: group.village,
-                taluka: group.taluka,
-                district: group.district,
-                state: group.state,
-                location: {
-                    address: group.location ? group.location.address : null,
-                    latitude: group.location ? group.location.latitude : null,
-                    longitude: group.location ? group.location.longitude : null
-                },
-                audioCall: true,
-                videoCall: true
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: "Failed to fetch group details",
-            error: error.message
-        });
-    }
-};
-const getGroupMembers = async(req, res) => {
-    try {
-        const { groupCode } = req.params;
-        const group = await Group.findOne({ groupCode }).populate(
-            "members.userId",
-            "fullName mobileNumber gender role"
-        );
-        if (!group) {
-            return res.status(404).json({
-                message: "Group not found"
-            });
-        }
-        const approvedMembers = [];
-        const pendingMembers = [];
-        const rejectedMembers = [];
-        group.members.forEach((member) => {
-            const memberData = {
-                userId: member.userId._id,
-                fullName: member.userId.fullName,
-                mobileNumber: member.userId.mobileNumber,
-                gender: member.userId.gender,
-                role: member.userId.role,
-                roleInGroup: member.roleInGroup,
-                status: member.status,
-                note: member.note || "",
-                joinedAt: member.joinedAt
-            };
-            if (member.status === "approved") {
-                approvedMembers.push(memberData);
-            }
-            if (member.status === "pending") {
-                pendingMembers.push(memberData);
-            }
-            if (member.status === "rejected") {
-                rejectedMembers.push(memberData);
-            }
-        });
-        res.status(200).json({
-            message: "Group members fetched successfully",
-            approvedMembers,
-            pendingMembers,
-            rejectedMembers
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: "Failed to fetch group members",
-            error: error.message
         });
     }
 };
@@ -520,42 +435,6 @@ const getAdminProfile = async(req, res) => {
         });
     }
 };
-const getGroupMemebers = async(req, res) => {
-    try {
-        const { groupCode } = req.params;
-        const group = await Group.findOne({
-            groupCode
-        }).populate(
-            "members.userId",
-            "fullName"
-        );
-        if (!group) {
-            return res.status(404).json({
-                message: "Group not found"
-            });
-        }
-        const members = group.members.map(
-            (member) => ({
-                memberId: member.userId ? member.userId._id : null,
-                fullName: member.userId ? member.userId.fullName : null,
-                roleInGroup: member.roleInGroup,
-                status: member.status === "rejected" ?
-                    "failed" : member.status || "pending",
-            })
-        );
-        res.status(200).json({
-            message: "Group members fetched successfully",
-            members
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: "Failed to fetch group members",
-            error: error.message
-        });
-
-    }
-
-};
 const getAdminMemberProfile = async(req, res) => {
     try {
         const { groupCode, memberId } = req.params;
@@ -585,7 +464,7 @@ const getAdminMemberProfile = async(req, res) => {
         }
 
         const member = await User.findById(memberId).select(
-            "fullName mobileNumber address dateofBirth profilePicture"
+            "fullName mobileNumber address dateOfBirth profilePicture"
         );
 
         if (!member) {
@@ -640,7 +519,7 @@ const getAdminMemberProfile = async(req, res) => {
                 fullName: member.fullName,
                 mobileNumber: member.mobileNumber,
                 address: member.address || null,
-                dateOfBirth: member.dateofBirth || null,
+                dateOfBirth: member.dateOfBirth || null,
                 profilePicture: member.profilePicture || null,
 
                 memberSince: memberExists.joinedAt || null,
@@ -662,16 +541,298 @@ const getAdminMemberProfile = async(req, res) => {
         });
     }
 };
+const getAdminPaymentDashboard = async(req, res) => {
+    try {
+        const adminId = req.user._id;
+
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}`;
+
+        const groups = await Group.find({ adminId });
+
+        const groupIds = groups.map((g) => g._id);
+
+        let totalReceivableThisMonth = 0;
+
+        groups.forEach((group) => {
+            group.members.forEach((member) => {
+                if (member.status === "approved") {
+                    totalReceivableThisMonth += member.monthlyContributionAmount || 0;
+                }
+            });
+        });
+
+        const receivedThisMonth = await Contribution.aggregate([{
+                $match: {
+                    groupId: { $in: groupIds },
+                    month: currentMonth,
+                    status: "paid",
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: "$amount" },
+                    count: { $sum: 1 },
+                },
+            },
+        ]);
+
+        const pendingRequests = await PaymentRequest.find({
+                adminId,
+                status: "pending",
+            })
+            .populate("userId", "fullName mobileNumber profilePicture")
+            .populate("groupId", "groupName groupCode")
+            .sort({ createdAt: -1 });
+
+        const formattedPendingRequests = pendingRequests.map((request) => ({
+            requestId: request._id,
+
+            memberId: request.userId ? request.userId._id : null,
+            memberName: request.userId ? request.userId.fullName || "Unknown Member" : "Unknown Member",
+            mobileNumber: request.userId ? request.userId.mobileNumber || "" : "",
+            profilePicture: request.userId ? request.userId.profilePicture || "" : "",
+
+            groupId: request.groupId ? request.groupId._id : null,
+            groupName: request.groupId ? request.groupId.groupName || "" : "",
+            groupCode: request.groupId ? request.groupId.groupCode || "" : "",
+
+            amount: request.amount,
+            month: request.month,
+            upiId: request.upiId,
+            screenshotUrl: request.screenshotUrl,
+            extractedInfo: request.extractedInfo,
+            status: request.status,
+            createdAt: request.createdAt,
+        }));
+
+        const pendingAmount = formattedPendingRequests.reduce(
+            (sum, request) => sum + (request.amount || 0),
+            0
+        );
+
+        const receivedTotal = receivedThisMonth[0] ? receivedThisMonth[0].total || 0 : 0;
+        const receivedCount = receivedThisMonth[0] ? receivedThisMonth[0].count || 0 : 0;
+
+        res.status(200).json({
+            message: "Admin payment dashboard fetched successfully",
+            currentMonth,
+
+            totalReceivableThisMonth,
+            totalReceivedThisMonth: receivedTotal,
+            remainingReceivableThisMonth: totalReceivableThisMonth - receivedTotal,
+            totalTransactionsThisMonth: receivedCount,
+
+            pendingPaymentRequests: formattedPendingRequests.length,
+            pendingAmount,
+
+            pendingRequests: formattedPendingRequests,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+        });
+    }
+};
+const removeMemberFromGroup = async(req, res) => {
+    try {
+        const adminId = req.user._id;
+        const { groupId, memberId } = req.params;
+
+        const group = await Group.findOne({
+            _id: groupId,
+            adminId,
+        });
+
+        if (!group) {
+            return res.status(404).json({
+                message: "Group not found or you are not admin of this group",
+            });
+        }
+
+        const durationInYears = group.durationOfGroup;
+
+        if (!durationInYears) {
+            return res.status(400).json({
+                message: "Group duration is not set for this group",
+            });
+        }
+
+        const groupEndDate = new Date(group.createdAt);
+        groupEndDate.setFullYear(groupEndDate.getFullYear() + durationInYears);
+
+        if (new Date() < groupEndDate) {
+            return res.status(400).json({
+                message: "Group duration is not completed yet",
+                groupEndDate,
+            });
+        }
+
+        const member = group.members.find(
+            (m) =>
+            m.userId.toString() === memberId &&
+            m.status === "approved"
+        );
+
+        if (!member) {
+            return res.status(404).json({
+                message: "Approved member not found in this group",
+            });
+        }
+
+        const activeLoan = await Loan.findOne({
+            groupId,
+            userId: memberId,
+            $or: [{
+                    status: "pending",
+                },
+                {
+                    status: "approved",
+                    remainingAmount: { $gt: 0 },
+                },
+            ],
+        });
+
+        if (activeLoan) {
+            return res.status(400).json({
+                message: "Member cannot be removed because loan is pending or remaining loan amount is not zero",
+            });
+        }
+
+        group.members = group.members.filter(
+            (m) => m.userId.toString() !== memberId
+        );
+
+        await group.save();
+
+        await User.findByIdAndUpdate(memberId, {
+            $pull: { groupIds: group._id },
+        });
+
+        res.status(200).json({
+            message: "Member removed from group successfully",
+            groupId: group._id,
+            removedMemberId: memberId,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+        });
+    }
+};
+
+const getGroupsWithMembers = async(req, res) => {
+    try {
+        const adminId = req.user._id;
+
+        const groups = await Group.find({ adminId })
+            .populate("members.userId", "fullName mobileNumber profilePicture");
+
+        const result = groups.map((group) => {
+            const activeMembers = [];
+            const pendingMembers = [];
+
+            group.members.forEach((member) => {
+                const memberData = {
+                    memberId: member.userId ? member.userId._id : null,
+                    fullName: member.userId ? member.userId.fullName || "Unknown" : "",
+                    mobileNumber: member.userId ? member.userId.mobileNumber || "" : "",
+                    profilePicture: member.userId ? member.userId.profilePicture || "" : "",
+                    membershipId: member.membershipId || "",
+                    status: member.status,
+                };
+
+                if (member.status === "approved") {
+                    activeMembers.push(memberData);
+                }
+
+                if (member.status === "pending") {
+                    pendingMembers.push(memberData);
+                }
+            });
+
+            return {
+                groupId: group._id,
+                groupName: group.groupName,
+                groupCode: group.groupCode,
+                totalMembers: group.members.length,
+                activeCount: activeMembers.length,
+                pendingCount: pendingMembers.length,
+                activeMembers,
+                pendingMembers,
+            };
+        });
+
+        res.status(200).json({
+            message: "Groups with members fetched successfully",
+            groups: result,
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+        });
+    }
+};
+
+const deleteGroupByAdmin = async(req, res) => {
+    try {
+        const adminId = req.user._id;
+        const { groupId } = req.params;
+        const group = await Group.findOne({
+            _id: groupId,
+            adminId,
+        });
+
+        if (!group) {
+            return res.status(404).json({
+                message: "Group not found or unauthorized",
+            });
+        }
+        const activeLoan = await Loan.findOne({
+            groupId,
+            status: { $in: ["approved", "active"] },
+        });
+
+        if (activeLoan) {
+            return res.status(400).json({
+                message: "Group cannot be deleted because active loan still exists",
+            });
+        }
+        await User.updateMany({
+            groupIds: groupId,
+        }, {
+            $pull: {
+                groupIds: groupId,
+            },
+        });
+
+        await Group.findByIdAndDelete(groupId);
+
+        return res.status(200).json({
+            message: "Group deleted successfully",
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            message: error.message,
+        });
+    }
+};
 module.exports = {
     registerAdmin,
     addMember,
     getAdminDashboardOverview,
-    getAdminGroups,
-    getGroupDetails,
-    getGroupMembers,
     createGroup,
     getAdminProfile,
     updatePaymentDetails,
-    getGroupMemebers,
-    getAdminMemberProfile
+    getAdminMemberProfile,
+    getAdminPaymentDashboard,
+    updateUpiId,
+    removeMemberFromGroup,
+    getGroupsWithMembers,
+    deleteGroupByAdmin
 };

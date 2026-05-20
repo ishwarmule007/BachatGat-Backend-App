@@ -14,7 +14,10 @@ const userSchema = new mongoose.Schema({
     roleSelection: { type: String, enum: ['admin', 'user'], required: true },
     gender: { type: String },
     dateOfBirth: { type: Date },
-    prefferredLanguage: { type: String },
+    prefferredLanguage: {
+        type: String,
+        default: "English"
+    },
     upiId: {
         type: String,
         default: null
@@ -39,11 +42,35 @@ const userSchema = new mongoose.Schema({
         bankName: {
             type: String,
             default: null
+        },
+        accountType: {
+            type: String,
+            enum: ["savings", "current"],
+            default: null
+        },
+        mobileNumberRegisteredWithBank: {
+            type: String,
+            default: null
         }
     },
     groupIds: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Group"
-    }]
-}, { timestamps: true });
+    }],
+    starredGroups: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Group",
+    }, ],
+
+    archivedGroups: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Group",
+    }, ],
+    address: {
+        type: String,
+        default: null
+    }
+}, {
+    timestamps: true
+});
 module.exports = mongoose.model('User', userSchema);

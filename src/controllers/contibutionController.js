@@ -1,58 +1,143 @@
-const Contribution = require('../models/contribution');
-const Group = require('../models/Group');
+const Group = require("../models/Group");
+const Contribution = require("../models/contribution");
+const PaymentRequest = require("../models/PaymentRequest");
 
-exports.makeContribution = async(req, res) => {
+const cloudinary = require("../config/cloud_for_photo");
+
+const sharp = require("sharp");
+const streamifier = require("streamifier");
+
+const { createNotification } = require("../utils/createNotification");
+
+exports.createPaymentRequest = async(req, res) => {
     try {
-        const { groupId, amount, month } = req.body;
-        if (!groupId || !amount || !month) {
+        const {
+            groupCode,
+            month,
+            upiId,
+            extractedInfo,
+        } = req.body;
+
+        if (!groupCode || !month || !upiId) {
             return res.status(400).json({
-                message: "groupId, amount and month are required"
+                message: "groupCode, month and upiId are required",
             });
         }
-        const group = await Group.findById(groupId);
+
+        if (!req.file) {
+            return res.status(400).json({
+                message: "Screenshot is required",
+            });
+        }
+
+        const group = await Group.findOne({ groupCode });
+
         if (!group) {
             return res.status(404).json({
-                message: "Group not found"
+                message: "Group not found",
             });
         }
-        if (!group.members.some(m => m.userId.toString() === req.user._id.toString())) {
+
+        const member = group.members.find(
+            (m) =>
+            m.userId.toString() === req.user._id.toString() &&
+            m.status === "approved"
+        );
+
+        if (!member) {
             return res.status(403).json({
-                message: "You are not a member of this group"
+                message: "You are not an approved member of this group",
             });
         }
-        const existingContribution = await Contribution.findOne({ userId: req.user._id, groupId, month });
+
+        const existingContribution = await Contribution.findOne({
+            userId: req.user._id,
+            groupId: group._id,
+            month,
+            status: "paid",
+        });
+
         if (existingContribution) {
             return res.status(400).json({
-                message: "Contribution for this month already exists"
+                message: "Contribution already paid for this month",
             });
         }
-        await Contribution.create({
+
+        const existingPendingRequest = await PaymentRequest.findOne({
             userId: req.user._id,
-            groupId,
-            amount: group.monthlyContribution,
+            groupId: group._id,
             month,
-            status: "paid"
+            status: "pending",
         });
+
+        if (existingPendingRequest) {
+            return res.status(400).json({
+                message: "Payment request already pending for this month",
+            });
+        }
+
+        // Compress image
+        const compressedImageBuffer = await sharp(req.file.buffer)
+            .resize({ width: 800 })
+            .jpeg({ quality: 60 })
+            .toBuffer();
+
+        // Upload to cloudinary
+        const uploadFromBuffer = () => {
+            return new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream({
+                        folder: "payment_screenshots",
+                    },
+                    (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result);
+                    }
+                );
+
+                streamifier.createReadStream(compressedImageBuffer).pipe(uploadStream);
+            });
+        };
+
+        const uploadedImage = await uploadFromBuffer();
+
+        const amount = member.monthlyContributionAmount || 0;
+
+        const paymentRequest = await PaymentRequest.create({
+            userId: req.user._id,
+            groupId: group._id,
+            adminId: group.adminId,
+            amount,
+            month,
+            upiId,
+            screenshotUrl: uploadedImage.secure_url,
+            extractedInfo,
+            status: "pending",
+        });
+
+        await createNotification({
+            userId: group.adminId,
+            groupId: group._id,
+            title: "Payment request received",
+            message: `${req.user.fullName} has sent payment request of ₹${amount}`,
+            type: "payment_request_received",
+        });
+
+        await createNotification({
+            userId: req.user._id,
+            groupId: group._id,
+            title: "Payment request sent",
+            message: `Your payment request of ₹${amount} has been sent`,
+            type: "payment_request_sent",
+        });
+
         res.status(201).json({
-            message: "Contribution made successfully"
+            message: "Payment request submitted successfully",
+            paymentRequest,
         });
-    } catch (error) {
-        res.status(500).json({
-            message: "Internal server error"
-        });
-    }
-};
-exports.getGroupContributions = async(req, res) => {
-    try {
-        const transactions = await Contribution.find({
-            userId: req.user._id
-        }).sort({ paidAt: -1 });
-
-        res.status(200).json(transactions);
 
     } catch (error) {
         res.status(500).json({
-            message: error.message
+            message: error.message,
         });
     }
 };

@@ -40,6 +40,11 @@ const groupSchema = new mongoose.Schema({
             ref: "User",
             required: true
         },
+        monthlyContribution: {
+            type: Number,
+            default: 0,
+            min: 0
+        },
 
         roleInGroup: {
             type: String,
@@ -61,6 +66,10 @@ const groupSchema = new mongoose.Schema({
         joinedAt: {
             type: Date,
             default: Date.now
+        },
+        durationOfGroup: {
+            type: Number,
+            default: 0
         }
     }]
 }, { timestamps: true });

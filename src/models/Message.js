@@ -28,7 +28,65 @@ const messageSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    isPinned: {
+        type: Boolean,
+        default: false
+    },
 
+    pinnedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+    },
+
+    pinnedAt: {
+        type: Date,
+        default: null
+    },
+
+    deletedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+    },
+    replyTo: {
+        messageId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Message",
+            default: null
+        },
+        message: {
+            type: String,
+            default: ""
+        },
+        senderName: {
+            type: String,
+            default: ""
+        },
+        messageType: {
+            type: String,
+            default: "text"
+        }
+    },
+    deletedAt: {
+        type: Date,
+        default: null
+    },
+    reactions: [{
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        },
+        emoji: {
+            type: String,
+            required: true
+        },
+        reactedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
     readBy: [{
         userId: {
             type: mongoose.Schema.Types.ObjectId,

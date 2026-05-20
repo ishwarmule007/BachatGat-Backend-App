@@ -27,6 +27,10 @@ const contributionSchema = new mongoose.Schema({
     paidAt: {
         type: Date,
         default: Date.now
+    },
+    paymentRequestId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "PaymentRequest"
     }
 });
 

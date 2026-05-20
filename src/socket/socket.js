@@ -15,10 +15,21 @@ const initializeSocket = (server) => {
 
     io.use(async(socket, next) => {
         try {
-            const token =
-                socket.handshake.auth?.token ||
-                socket.handshake.headers?.authorization?.split(" ")[1] ||
-                socket.handshake.query?.token;
+            let token;
+
+            if (socket.handshake.auth && socket.handshake.auth.token) {
+                token = socket.handshake.auth.token;
+            } else if (
+                socket.handshake.headers &&
+                socket.handshake.headers.authorization
+            ) {
+                token = socket.handshake.headers.authorization.split(" ")[1];
+            } else if (
+                socket.handshake.query &&
+                socket.handshake.query.token
+            ) {
+                token = socket.handshake.query.token;
+            }
 
             if (!token) {
                 return next(new Error("Token missing"));
@@ -42,9 +53,20 @@ const initializeSocket = (server) => {
     io.on("connection", (socket) => {
         console.log("User connected:", socket.user.fullName);
 
-        socket.on("joinGroup", async({ groupCode }) => {
+        socket.on("joinGroup", async(data) => {
             try {
-                const group = await Group.findOne({ groupCode });
+                const groupCode = data && data.groupCode;
+                const cleanGroupCode = String(groupCode || "").trim();
+
+                if (!cleanGroupCode) {
+                    return socket.emit("errorMessage", {
+                        message: "groupCode is required"
+                    });
+                }
+
+                const group = await Group.findOne({
+                    groupCode: cleanGroupCode
+                });
 
                 if (!group) {
                     return socket.emit("errorMessage", {
@@ -54,6 +76,7 @@ const initializeSocket = (server) => {
 
                 const isApprovedMember = group.members.some(
                     (m) =>
+                    m.userId &&
                     m.userId.toString() === socket.user._id.toString() &&
                     m.status === "approved"
                 );
@@ -64,11 +87,11 @@ const initializeSocket = (server) => {
                     });
                 }
 
-                socket.join(groupCode);
+                socket.join(cleanGroupCode);
 
                 socket.emit("joinedGroup", {
                     message: "Joined group chat successfully",
-                    groupCode
+                    groupCode: cleanGroupCode
                 });
             } catch (error) {
                 socket.emit("errorMessage", {
@@ -76,33 +99,70 @@ const initializeSocket = (server) => {
                 });
             }
         });
-
-        socket.on("sendMessage", async({ groupCode, message, messageType }) => {
+        socket.on("sendMessage", async(data) => {
             try {
-                if (!groupCode || !message) {
+                const groupCode = data && data.groupCode;
+                const message = data && data.message;
+                const messageType = data && data.messageType;
+                const replyTo = data && data.replyTo;
+
+                const cleanGroupCode = String(groupCode || "").trim();
+
+                if (!cleanGroupCode || !message) {
                     return socket.emit("errorMessage", {
-                        message: "groupCode and message are required"
+                        message: "groupCode and message are required",
                     });
                 }
 
-                const group = await Group.findOne({ groupCode });
+                const group = await Group.findOne({
+                    groupCode: cleanGroupCode,
+                });
 
                 if (!group) {
                     return socket.emit("errorMessage", {
-                        message: "Group not found"
+                        message: "Group not found",
                     });
                 }
 
                 const isApprovedMember = group.members.some(
                     (m) =>
+                    m.userId &&
                     m.userId.toString() === socket.user._id.toString() &&
                     m.status === "approved"
                 );
 
                 if (!isApprovedMember) {
                     return socket.emit("errorMessage", {
-                        message: "You are not approved member of this group"
+                        message: "You are not approved member of this group",
                     });
+                }
+
+                let replyData = {
+                    messageId: null,
+                    message: "",
+                    senderName: "",
+                    messageType: "text",
+                };
+
+                if (replyTo) {
+                    const oldMessage = await Message.findOne({
+                        _id: replyTo,
+                        groupId: group._id,
+                    }).populate("senderId", "fullName");
+
+                    if (!oldMessage) {
+                        return socket.emit("errorMessage", {
+                            message: "Reply message not found in this group",
+                        });
+                    }
+
+                    replyData = {
+                        messageId: oldMessage._id,
+                        message: oldMessage.isDeleted ?
+                            "This message was deleted" : oldMessage.message,
+                        senderName: oldMessage.senderId ? oldMessage.senderId.fullName || "Unknown" : "Unknown",
+                        messageType: oldMessage.messageType || "text",
+                    };
                 }
 
                 const newMessage = await Message.create({
@@ -110,15 +170,92 @@ const initializeSocket = (server) => {
                     senderId: socket.user._id,
                     messageType: messageType || "text",
                     message,
+                    replyTo: replyData,
                     readBy: [{
-                        userId: socket.user._id
-                    }]
+                        userId: socket.user._id,
+                    }, ],
                 });
 
-                const populatedMessage = await Message.findById(newMessage._id)
-                    .populate("senderId", "fullName mobileNumber roleSelection");
+                const populatedMessage = await Message.findById(newMessage._id).populate(
+                    "senderId",
+                    "fullName mobileNumber roleSelection"
+                );
 
-                io.to(groupCode).emit("receiveMessage", populatedMessage);
+                socket.join(cleanGroupCode);
+
+                io.to(cleanGroupCode).emit("receiveMessage", populatedMessage);
+            } catch (error) {
+                socket.emit("errorMessage", {
+                    message: error.message,
+                });
+            }
+        });
+
+        socket.on("deleteMessage", async(data) => {
+            try {
+                const messageId = data && data.messageId;
+
+                if (!messageId) {
+                    return socket.emit("errorMessage", {
+                        message: "messageId is required"
+                    });
+                }
+
+                const message = await Message.findById(messageId);
+
+                if (!message) {
+                    return socket.emit("errorMessage", {
+                        message: "Message not found"
+                    });
+                }
+
+                const group = await Group.findById(message.groupId);
+
+                if (!group) {
+                    return socket.emit("errorMessage", {
+                        message: "Group not found"
+                    });
+                }
+
+                const isApprovedMember = group.members.some(
+                    (m) =>
+                    m.userId &&
+                    m.userId.toString() === socket.user._id.toString() &&
+                    m.status === "approved"
+                );
+
+                if (!isApprovedMember) {
+                    return socket.emit("errorMessage", {
+                        message: "You are not approved member of this group"
+                    });
+                }
+
+                const isOwnMessage =
+                    message.senderId.toString() === socket.user._id.toString();
+
+                const isAdmin =
+                    group.adminId &&
+                    group.adminId.toString() === socket.user._id.toString();
+
+                if (!isOwnMessage && !isAdmin) {
+                    return socket.emit("errorMessage", {
+                        message: "You can delete only your own message"
+                    });
+                }
+
+                message.isDeleted = true;
+                message.message = "This message was deleted";
+                message.deletedBy = socket.user._id;
+                message.deletedAt = new Date();
+
+                await message.save();
+
+                io.to(group.groupCode).emit("messageDeleted", {
+                    messageId: message._id,
+                    groupCode: group.groupCode,
+                    deletedBy: socket.user._id,
+                    deletedAt: message.deletedAt
+                });
             } catch (error) {
                 socket.emit("errorMessage", {
                     message: error.message
@@ -126,6 +263,248 @@ const initializeSocket = (server) => {
             }
         });
 
+        socket.on("pinMessage", async(data) => {
+            try {
+                const messageId = data && data.messageId;
+
+                if (!messageId) {
+                    return socket.emit("errorMessage", {
+                        message: "messageId is required"
+                    });
+                }
+
+                const message = await Message.findById(messageId);
+
+                if (!message) {
+                    return socket.emit("errorMessage", {
+                        message: "Message not found"
+                    });
+                }
+
+                const group = await Group.findById(message.groupId);
+
+                if (!group) {
+                    return socket.emit("errorMessage", {
+                        message: "Group not found"
+                    });
+                }
+
+                const isAdmin =
+                    group.adminId &&
+                    group.adminId.toString() === socket.user._id.toString();
+
+                if (!isAdmin) {
+                    return socket.emit("errorMessage", {
+                        message: "Only admin can pin message"
+                    });
+                }
+
+                message.isPinned = true;
+                message.pinnedBy = socket.user._id;
+                message.pinnedAt = new Date();
+
+                await message.save();
+
+                const populatedMessage = await Message.findById(message._id)
+                    .populate("senderId", "fullName mobileNumber roleSelection")
+                    .populate("pinnedBy", "fullName mobileNumber roleSelection");
+
+                io.to(group.groupCode).emit("messagePinned", {
+                    groupCode: group.groupCode,
+                    message: populatedMessage
+                });
+            } catch (error) {
+                socket.emit("errorMessage", {
+                    message: error.message
+                });
+            }
+        });
+
+        socket.on("unpinMessage", async(data) => {
+            try {
+                const messageId = data && data.messageId;
+
+                if (!messageId) {
+                    return socket.emit("errorMessage", {
+                        message: "messageId is required"
+                    });
+                }
+
+                const message = await Message.findById(messageId);
+
+                if (!message) {
+                    return socket.emit("errorMessage", {
+                        message: "Message not found"
+                    });
+                }
+
+                const group = await Group.findById(message.groupId);
+
+                if (!group) {
+                    return socket.emit("errorMessage", {
+                        message: "Group not found"
+                    });
+                }
+
+                const isAdmin =
+                    group.adminId &&
+                    group.adminId.toString() === socket.user._id.toString();
+
+                if (!isAdmin) {
+                    return socket.emit("errorMessage", {
+                        message: "Only admin can unpin message"
+                    });
+                }
+
+                message.isPinned = false;
+                message.pinnedBy = null;
+                message.pinnedAt = null;
+
+                await message.save();
+
+                io.to(group.groupCode).emit("messageUnpinned", {
+                    groupCode: group.groupCode,
+                    messageId: message._id
+                });
+            } catch (error) {
+                socket.emit("errorMessage", {
+                    message: error.message
+                });
+            }
+        });
+
+        socket.on("reactMessage", async(data) => {
+            try {
+                const messageId = data && data.messageId;
+                const emoji = data && data.emoji;
+
+                if (!messageId || !emoji) {
+                    return socket.emit("errorMessage", {
+                        message: "messageId and emoji are required"
+                    });
+                }
+
+                const message = await Message.findById(messageId);
+
+                if (!message) {
+                    return socket.emit("errorMessage", {
+                        message: "Message not found"
+                    });
+                }
+
+                const group = await Group.findById(message.groupId);
+
+                if (!group) {
+                    return socket.emit("errorMessage", {
+                        message: "Group not found"
+                    });
+                }
+
+                const isApprovedMember = group.members.some(
+                    (m) =>
+                    m.userId &&
+                    m.userId.toString() === socket.user._id.toString() &&
+                    m.status === "approved"
+                );
+
+                if (!isApprovedMember) {
+                    return socket.emit("errorMessage", {
+                        message: "You are not approved member of this group"
+                    });
+                }
+
+                const existingReactionIndex = message.reactions.findIndex(
+                    (reaction) =>
+                    reaction.userId.toString() === socket.user._id.toString()
+                );
+
+                if (existingReactionIndex !== -1) {
+                    message.reactions[existingReactionIndex].emoji = emoji;
+                    message.reactions[existingReactionIndex].reactedAt = new Date();
+                } else {
+                    message.reactions.push({
+                        userId: socket.user._id,
+                        emoji
+                    });
+                }
+
+                await message.save();
+
+                const updatedMessage = await Message.findById(message._id)
+                    .populate("senderId", "fullName mobileNumber roleSelection")
+                    .populate("reactions.userId", "fullName mobileNumber roleSelection");
+
+                io.to(group.groupCode).emit("messageReacted", {
+                    groupCode: group.groupCode,
+                    messageId: message._id,
+                    reactions: updatedMessage.reactions
+                });
+            } catch (error) {
+                socket.emit("errorMessage", {
+                    message: error.message
+                });
+            }
+        });
+        socket.on("removeReaction", async(data) => {
+            try {
+                const messageId = data && data.messageId;
+
+                if (!messageId) {
+                    return socket.emit("errorMessage", {
+                        message: "messageId is required"
+                    });
+                }
+
+                const message = await Message.findById(messageId);
+
+                if (!message) {
+                    return socket.emit("errorMessage", {
+                        message: "Message not found"
+                    });
+                }
+
+                const group = await Group.findById(message.groupId);
+
+                if (!group) {
+                    return socket.emit("errorMessage", {
+                        message: "Group not found"
+                    });
+                }
+
+                const isApprovedMember = group.members.some(
+                    (m) =>
+                    m.userId &&
+                    m.userId.toString() === socket.user._id.toString() &&
+                    m.status === "approved"
+                );
+
+                if (!isApprovedMember) {
+                    return socket.emit("errorMessage", {
+                        message: "You are not approved member of this group"
+                    });
+                }
+
+                message.reactions = message.reactions.filter(
+                    (reaction) =>
+                    reaction.userId.toString() !== socket.user._id.toString()
+                );
+
+                await message.save();
+
+                const updatedMessage = await Message.findById(message._id)
+                    .populate("reactions.userId", "fullName mobileNumber roleSelection");
+
+                io.to(group.groupCode).emit("messageReactionRemoved", {
+                    groupCode: group.groupCode,
+                    messageId: message._id,
+                    reactions: updatedMessage.reactions
+                });
+            } catch (error) {
+                socket.emit("errorMessage", {
+                    message: error.message
+                });
+            }
+        });
         socket.on("disconnect", () => {
             console.log("User disconnected:", socket.user.fullName);
         });
