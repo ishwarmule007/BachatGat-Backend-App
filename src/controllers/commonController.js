@@ -187,4 +187,69 @@ const logoutUser = async(req, res) => {
         });
     }
 };
-module.exports = { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser };
+const starGroup = async(req, res) => {
+    try {
+        const userId = req.user._id;
+        const { groupId } = req.params;
+
+        await User.findByIdAndUpdate(userId, {
+            $addToSet: { starredGroups: groupId },
+        });
+
+        res.status(200).json({
+            message: "Group starred successfully",
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+const unstarGroup = async(req, res) => {
+    try {
+        const userId = req.user._id;
+        const { groupId } = req.params;
+
+        await User.findByIdAndUpdate(userId, {
+            $pull: { starredGroups: groupId },
+        });
+
+        res.status(200).json({
+            message: "Group unstarred successfully",
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+const archiveGroup = async(req, res) => {
+    try {
+        const userId = req.user._id;
+        const { groupId } = req.params;
+
+        await User.findByIdAndUpdate(userId, {
+            $addToSet: { archivedGroups: groupId },
+        });
+
+        res.status(200).json({
+            message: "Group archived successfully",
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const unarchiveGroup = async(req, res) => {
+    try {
+        const userId = req.user._id;
+        const { groupId } = req.params;
+
+        await User.findByIdAndUpdate(userId, {
+            $pull: { archivedGroups: groupId },
+        });
+
+        res.status(200).json({
+            message: "Group unarchived successfully",
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+module.exports = { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, starGroup, unstarGroup, archiveGroup, unarchiveGroup };

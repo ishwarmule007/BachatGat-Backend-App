@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser } = require("../controllers/commonController");
+const { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, starGroup, unstarGroup, archiveGroup, unarchiveGroup } = require("../controllers/commonController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
 
@@ -289,5 +289,147 @@ router.post(
     authMiddleware,
     logoutUser
 );
+/**
+ * @swagger
+ * /api/chat/groups/{groupId}/star:
+ *   patch:
+ *     summary: Star a group
+ *     tags:
+ *       - Chat Groups
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: groupId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Group ID
+ *     responses:
+ *       200:
+ *         description: Group starred successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Group starred successfully
+ *       500:
+ *         description: Server error
+ */
+router.patch(
+    "/groups/:groupId/star",
+    authMiddleware,
+    starGroup
+);
 
+/**
+ * @swagger
+ * /api/chat/groups/{groupId}/unstar:
+ *   patch:
+ *     summary: Unstar a group
+ *     tags:
+ *       - Chat Groups
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: groupId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Group ID
+ *     responses:
+ *       200:
+ *         description: Group unstarred successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Group unstarred successfully
+ *       500:
+ *         description: Server error
+ */
+router.patch(
+    "/groups/:groupId/unstar",
+    authMiddleware,
+    unstarGroup
+);
+
+/**
+ * @swagger
+ * /api/chat/groups/{groupId}/archive:
+ *   patch:
+ *     summary: Archive a group
+ *     tags:
+ *       - Chat Groups
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: groupId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Group ID
+ *     responses:
+ *       200:
+ *         description: Group archived successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Group archived successfully
+ *       500:
+ *         description: Server error
+ */
+router.patch(
+    "/groups/:groupId/archive",
+    authMiddleware,
+    archiveGroup
+);
+
+/**
+ * @swagger
+ * /api/chat/groups/{groupId}/unarchive:
+ *   patch:
+ *     summary: Unarchive a group
+ *     tags:
+ *       - Chat Groups
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: groupId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Group ID
+ *     responses:
+ *       200:
+ *         description: Group unarchived successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Group unarchived successfully
+ *       500:
+ *         description: Server error
+ */
+router.patch(
+    "/groups/:groupId/unarchive",
+    authMiddleware,
+    unarchiveGroup
+);
 module.exports = router;

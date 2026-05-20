@@ -57,6 +57,15 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Group"
     }],
+    starredGroups: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Group",
+    }, ],
+
+    archivedGroups: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Group",
+    }, ],
     address: {
         type: String,
         default: null
