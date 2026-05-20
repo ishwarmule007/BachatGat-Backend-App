@@ -91,5 +91,89 @@ router.get(
     authMiddleware,
     getGroupMessages
 );
+/**
+ * @swagger
+ * /api/chat/socket-events:
+ *   get:
+ *     summary: Socket.IO chat events documentation
+ *     description: |
+ *       This route is only for documentation.
+ *       It is not used in frontend API calls.
+ *
+ *       Socket Events
+ *
+ *       Emit Events:
+ *
+ *       1. joinGroup
+ *       socket.emit("joinGroup", {
+ *         groupCode
+ *       });
+ *
+ *       2. sendMessage
+ *
+ *       2.1 For normal message:
+ *       socket.emit("sendMessage", {
+ *         groupCode,
+ *         message,
+ *         messageType
+ *       });
+ *
+ *       2.2 For reply message:
+ *       socket.emit("sendMessage", {
+ *         groupCode,
+ *         message,
+ *         messageType,
+ *         replyTo
+ *       });
+ *
+ *       Here replyTo means old messageId to which user is replying.
+ *
+ *       3. deleteMessage
+ *       socket.emit("deleteMessage", {
+ *         messageId
+ *       });
+ *
+ *       4. pinMessage
+ *       socket.emit("pinMessage", {
+ *         messageId
+ *       });
+ *
+ *       5. unpinMessage
+ *       socket.emit("unpinMessage", {
+ *         messageId
+ *       });
+ *
+ *       6. reactMessage
+ *       socket.emit("reactMessage", {
+ *         messageId,
+ *         emoji
+ *       });
+ *
+ *       7. removeReaction
+ *       socket.emit("removeReaction", {
+ *         messageId
+ *       });
+ *
+ *       Listen Events:
+ *
+ *       1. joinedGroup
+ *       2. receiveMessage
+ *       3. messageDeleted
+ *       4. messagePinned
+ *       5. messageUnpinned
+ *       6. errorMessage
+ *       7. messageReacted
+ *       8. messageReactionRemoved
+ *     tags:
+ *       - Socket Events
+ *     responses:
+ *       200:
+ *         description: Socket.IO event documentation
+ */
+router.get("/socket_events_documentation", (req, res) => {
+    res.status(200).json({
+        message: "socket event documentation"
+    });
+});
 
 module.exports = router;
