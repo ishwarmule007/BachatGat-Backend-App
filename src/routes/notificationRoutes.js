@@ -11,7 +11,7 @@ const {
 
 /**
  * @swagger
- * /api/notification:
+ * /api/notifications/:
  *   get:
  *     summary: Get all notifications of logged in user
  *     tags: [Notification]
@@ -73,7 +73,7 @@ router.get("/", authMiddleware, getMyNotifications);
 
 /**
  * @swagger
- * /api/notification/mark-read/{notificationId}:
+ * /api/notifications/mark-read/{notificationId}:
  *   patch:
  *     summary: Mark single notification as read
  *     tags: [Notification]
@@ -104,7 +104,7 @@ router.patch(
 
 /**
  * @swagger
- * /api/notification/mark-all-read:
+ * /api/notifications/mark-all-read:
  *   patch:
  *     summary: Mark all notifications as read
  *     tags: [Notification]

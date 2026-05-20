@@ -11,7 +11,7 @@ const {
 } = require("../controllers/announcementController");
 /**
  * @swagger
- * /api/announcement/{groupId}:
+ * /api/announcements/{groupId}:
  *   post:
  *     summary: Create a new announcement in a group
  *     tags: [Announcement]
@@ -68,7 +68,7 @@ const {
 router.post("/:groupId", authMiddleware, createAnnouncement);
 /**
  * @swagger
- * /api/announcement/get/{groupId}:
+ * /api/announcements/get/{groupId}:
  *   get:
  *     summary: Get all announcements of a group
  *     tags: [Announcement]
@@ -142,7 +142,7 @@ router.post("/:groupId", authMiddleware, createAnnouncement);
 router.get("/get/:groupId", authMiddleware, getGroupAnnouncements);
 /**
  * @swagger
- * /api/announcement/update/{announcementId}:
+ * /api/announcements/update/{announcementId}:
  *   put:
  *     summary: Update an announcement
  *     tags: [Announcement]
@@ -195,7 +195,7 @@ router.get("/get/:groupId", authMiddleware, getGroupAnnouncements);
 router.put("/update/:announcementId", authMiddleware, updateAnnouncement);
 /**
  * @swagger
- * /api/announcement/delete/{announcementId}:
+ * /api/announcements/delete/{announcementId}:
  *   delete:
  *     summary: Delete an announcement
  *     tags: [Announcement]

@@ -19,7 +19,7 @@ const {
 } = require("../controllers/adminController");
 /**
  * @swagger
- * /api/payment/request:
+ * /api/payments/request:
  *   post:
  *     summary: Create payment request with screenshot upload
  *     tags: [Payment]
@@ -73,7 +73,7 @@ router.post(
 
 /**
  * @swagger
- * /api/payment/member/{groupCode}:
+ * /api/payments/member/{groupCode}:
  *   get:
  *     summary: Get member payment page details
  *     tags: [Payment]
@@ -152,7 +152,7 @@ router.get(
 
 /**
  * @swagger
- * /api/payment/member/history:
+ * /api/payments/member/history:
  *   get:
  *     summary: Get payment history of logged in member
  *     tags: [Payment]
@@ -217,7 +217,7 @@ router.get(
 
 /**
  * @swagger
- * /api/payment/admin/requests:
+ * /api/payments/admin/requests:
  *   get:
  *     summary: Get all payment requests for admin
  *     tags: [Payment]
@@ -289,7 +289,7 @@ router.get(
 
 /**
  * @swagger
- * /api/payment/admin/dashboard:
+ * /api/payments/admin/dashboard:
  *   get:
  *     summary: Get admin payment dashboard overview
  *     tags: [Payment]
@@ -331,7 +331,7 @@ router.get(
 
 /**
  * @swagger
- * /api/payment/admin/requests/{requestId}:
+ * /api/payments/admin/requests/{requestId}:
  *   get:
  *     summary: Get detailed payment request information
  *     tags: [Payment]
@@ -398,7 +398,7 @@ router.get(
 
 /**
  * @swagger
- * /api/payment/generate-payment-link/{groupId}:
+ * /api/payments/generate-payment-link/{groupId}:
  *   get:
  *     summary: Generate contribution payment deep link
  *     tags: [Payment]
@@ -471,7 +471,7 @@ router.get(
 );
 /**
  * @swagger
- * /api/payment/update-payment-request-status:
+ * /api/payments/update-payment-request-status:
  *   patch:
  *     summary: Accept or reject payment request
  *     tags: [Payment]
