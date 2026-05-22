@@ -158,6 +158,7 @@ const getMyGroups = async(req, res) => {
             formationDate: group.formationDate,
             totalSaving: group.totalSaving || 0,
             totalLoanGiven: group.totalLoanGiven || 0,
+            totalMembers: group.members.filter((member) => member.status === "approved").length,
         }));
 
         res.status(200).json({
