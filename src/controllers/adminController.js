@@ -777,7 +777,68 @@ const getGroupsWithMembers = async(req, res) => {
         });
     }
 };
+const editMemberByAdmin = async(req, res) => {
+    try {
+        const adminId = req.user._id;
+        const { groupCode, memberId } = req.params;
 
+        const {
+            fullName,
+            mobileNumber,
+            dateofBirth,
+            address
+        } = req.body;
+
+        const group = await Group.findOne({
+            groupCode,
+            adminId,
+            "members.userId": memberId
+        });
+
+        if (!group) {
+            return res.status(404).json({
+                message: "Member not found in your group"
+            });
+        }
+
+        const updateData = {};
+
+        if (fullName !== undefined) updateData.fullName = fullName;
+        if (mobileNumber !== undefined) updateData.mobileNumber = mobileNumber;
+        if (dateofBirth !== undefined) updateData.dateofBirth = dateofBirth;
+        if (address !== undefined) updateData.address = address;
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({
+                message: "No valid field provided for update"
+            });
+        }
+
+        const updatedMember = await User.findByIdAndUpdate(
+            memberId,
+            updateData, {
+                new: true,
+                runValidators: true
+            }
+        ).select("fullName mobileNumber dateofBirth address profilePicture roleSelection");
+
+        if (!updatedMember) {
+            return res.status(404).json({
+                message: "Member user not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "Member information updated successfully",
+            member: updatedMember
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: error.message
+        });
+    }
+};
 const deleteGroupByAdmin = async(req, res) => {
     try {
         const adminId = req.user._id;
@@ -834,5 +895,6 @@ module.exports = {
     updateUpiId,
     removeMemberFromGroup,
     getGroupsWithMembers,
+    editMemberByAdmin,
     deleteGroupByAdmin
 };

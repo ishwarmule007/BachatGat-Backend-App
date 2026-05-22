@@ -11,6 +11,7 @@ const {
     updateUpiId,
     removeMemberFromGroup,
     getGroupsWithMembers,
+    editMemberByAdmin,
     deleteGroupByAdmin
 } = require("../controllers/adminController");
 
@@ -667,6 +668,71 @@ router.get(
     authMiddleware,
     adminMiddleware,
     getGroupsWithMembers
+);
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     EditMemberByAdminRequest:
+ *       type: object
+ *       properties:
+ *         fullName:
+ *           type: string
+ *           example: Rahul Sharma
+ *
+ *         mobileNumber:
+ *           type: string
+ *           example: "9876543210"
+ *
+ *         dateofBirth:
+ *           type: string
+ *           format: date
+ *           example: 2002-05-15
+ *
+ *         address:
+ *           type: string
+ *           example: Pune, Maharashtra
+ *
+ *     EditMemberByAdminResponse:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ *           example: Member information updated successfully
+ *
+ *         member:
+ *           type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               example: 665f1a2b3c4d5e6f78901234
+ *
+ *             fullName:
+ *               type: string
+ *               example: Rahul Sharma
+ *
+ *             mobileNumber:
+ *               type: string
+ *               example: "9876543210"
+ *
+ *             dateofBirth:
+ *               type: string
+ *               format: date
+ *               example: 2002-05-15
+ *
+ *             address:
+ *               type: string
+ *               example: Pune, Maharashtra
+ *
+ *             roleSelection:
+ *               type: string
+ *               example: user
+ */
+router.patch(
+    "/groups/:groupCode/members/:memberId",
+    authMiddleware,
+    adminMiddleware,
+    editMemberByAdmin
 );
 /**
  * @swagger
