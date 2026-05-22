@@ -509,11 +509,12 @@ router.get(
 /**
  * @swagger
  * /api/admin/groups/{groupCode}/members/{memberId}:
- *   delete:
- *     summary: Remove member from group
+ *   patch:
+ *     summary: Edit member information by admin
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
+ *
  *     parameters:
  *       - in: path
  *         name: groupCode
@@ -521,31 +522,98 @@ router.get(
  *         schema:
  *           type: string
  *         example: "SBG-001"
+ *
  *       - in: path
  *         name: memberId
  *         required: true
  *         schema:
  *           type: string
  *         example: "665c1f9a2b7d8f1234567890"
+ *
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *                 example: "Rahul Sharma"
+ *
+ *               mobileNumber:
+ *                 type: string
+ *                 example: "9876543210"
+ *
+ *               dateofBirth:
+ *                 type: string
+ *                 format: date
+ *                 example: "2000-05-19"
+ *
+ *               address:
+ *                 type: string
+ *                 example: "Nashik, Maharashtra"
+ *
  *     responses:
  *       200:
- *         description: Member removed from group successfully
+ *         description: Member information updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Member information updated successfully"
+ *
+ *                 member:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "665c1f9a2b7d8f1234567890"
+ *
+ *                     fullName:
+ *                       type: string
+ *                       example: "Rahul Sharma"
+ *
+ *                     mobileNumber:
+ *                       type: string
+ *                       example: "9876543210"
+ *
+ *                     dateofBirth:
+ *                       type: string
+ *                       format: date
+ *                       example: "2000-05-19"
+ *
+ *                     address:
+ *                       type: string
+ *                       example: "Nashik, Maharashtra"
+ *
+ *                     roleSelection:
+ *                       type: string
+ *                       example: "user"
+ *
  *       400:
- *         description: Group duration not completed or active loan exists
+ *         description: No valid field provided for update
+ *
  *       401:
  *         description: Unauthorized - Token missing or invalid
+ *
  *       403:
  *         description: Access denied - Admin only
+ *
  *       404:
  *         description: Group or member not found
+ *
  *       500:
  *         description: Internal server error
  */
-router.delete(
+router.patch(
     "/groups/:groupCode/members/:memberId",
     authMiddleware,
     adminMiddleware,
-    removeMemberFromGroup
+    editMemberByAdmin
 );
 /**
  * @swagger
@@ -670,7 +738,10 @@ router.get(
     getGroupsWithMembers
 );
 /**
- * @swagger
+ *@swagger
+ * /api/admin/groups/{groupCode}/members/{memberId}:
+ *   get:
+ *     summary: Get all groups with active and pending members
  * components:
  *   schemas:
  *     EditMemberByAdminRequest:
