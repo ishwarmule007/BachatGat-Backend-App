@@ -155,6 +155,16 @@ router.get(
  *         messageId
  *       });
  *
+ *       8. starMessage
+ *       socket.emit("starMessage", {
+ *         messageId
+ *       });
+ *
+ *       9. unstarMessage
+ *       socket.emit("unstarMessage", {
+ *         messageId
+ *       });
+ *
  *       Listen Events:
  *
  *       1. joinedGroup
@@ -165,6 +175,8 @@ router.get(
  *       6. errorMessage
  *       7. messageReacted
  *       8. messageReactionRemoved
+ *       9. messageStarred
+ *       10. messageUnstarred
  *     tags:
  *       - Socket Events
  *     responses:
