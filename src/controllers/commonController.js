@@ -136,28 +136,26 @@ const getMyGroups = async(req, res) => {
     try {
         const userId = req.user._id;
 
+        const user = await User.findById(userId);
+
         const groups = await Group.find({
-            $or: [
-                { adminId: userId },
-                { "members.userId": userId }
-            ]
-        }).sort({ createdAt: -1 });
-
-        const formattedGroups = groups.map((group) => {
-            const approvedMembers = group.members.filter(
-                (member) => member.status === "approved"
-            );
-
-            return {
-                groupId: group._id,
-                groupName: group.groupName,
-                groupCode: group.groupCode,
-                totalMembers: approvedMembers.length,
-                totalSaving: group.totalSaving || 0,
-                formationDate: group.formationDate,
-                location: group.location
-            };
+            "members.userId": userId,
+            "members.status": "approved"
         });
+
+        const formattedGroups = groups.map((group) => ({
+            groupId: group._id,
+            groupName: group.groupName,
+            groupCode: group.groupCode,
+
+            isArchived: user.archivedGroups.some(
+                (id) => id.toString() === group._id.toString()
+            ),
+
+            isStarred: user.starredGroups.some(
+                (id) => id.toString() === group._id.toString()
+            ),
+        }));
 
         res.status(200).json({
             message: "Groups fetched successfully",
@@ -166,8 +164,7 @@ const getMyGroups = async(req, res) => {
 
     } catch (error) {
         res.status(500).json({
-            message: "Failed to fetch groups",
-            error: error.message
+            message: error.message
         });
     }
 };

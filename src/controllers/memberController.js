@@ -385,7 +385,7 @@ const getMemberProfile = async(req, res) => {
                 memberName: user.fullName,
                 mobileNumber: user.mobileNumber,
                 address: user.address || null,
-                dateOfBirth: user.dateofBirth
+                dateOfBirth: user.dateOfBirth
             },
 
             loanSummary: {
