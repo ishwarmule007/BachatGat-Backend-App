@@ -87,6 +87,17 @@ const messageSchema = new mongoose.Schema({
             default: Date.now
         }
     }],
+    starredBy: [{
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        },
+        starredAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
     readBy: [{
         userId: {
             type: mongoose.Schema.Types.ObjectId,

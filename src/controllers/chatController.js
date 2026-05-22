@@ -47,14 +47,22 @@ const getGroupMessages = async(req, res) => {
         const messages = await Message.find(messageFilter)
             .populate("senderId", "fullName mobileNumber roleSelection")
             .populate("reactions.userId", "fullName mobileNumber roleSelection")
+            .populate("starredBy.userId", "fullName mobileNumber roleSelection")
             .sort({ createdAt: 1 });
+
+        const formattedMessages = messages.map((msg) => ({
+            ...msg.toObject(),
+            isStarredByMe: msg.starredBy.some(
+                (star) => star.userId._id.toString() === userId.toString()
+            ),
+        }));
 
         res.status(200).json({
             message: "Messages fetched successfully",
             groupCode: group.groupCode,
             clearedAt: clearData ? clearData.clearedAt : null,
-            totalMessages: messages.length,
-            messages,
+            totalMessages: formattedMessages.length,
+            messages: formattedMessages,
         });
     } catch (error) {
         res.status(500).json({

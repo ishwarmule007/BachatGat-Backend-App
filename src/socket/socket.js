@@ -505,6 +505,125 @@ const initializeSocket = (server) => {
                 });
             }
         });
+        socket.on("starMessage", async(data) => {
+            try {
+                const messageId = data && data.messageId;
+
+                if (!messageId) {
+                    return socket.emit("errorMessage", {
+                        message: "messageId is required"
+                    });
+                }
+
+                const message = await Message.findById(messageId);
+
+                if (!message) {
+                    return socket.emit("errorMessage", {
+                        message: "Message not found"
+                    });
+                }
+
+                const group = await Group.findById(message.groupId);
+
+                if (!group) {
+                    return socket.emit("errorMessage", {
+                        message: "Group not found"
+                    });
+                }
+
+                const isApprovedMember = group.members.some(
+                    (m) =>
+                    m.userId &&
+                    m.userId.toString() === socket.user._id.toString() &&
+                    m.status === "approved"
+                );
+
+                if (!isApprovedMember) {
+                    return socket.emit("errorMessage", {
+                        message: "You are not approved member of this group"
+                    });
+                }
+
+                const alreadyStarred = message.starredBy.some(
+                    (star) => star.userId.toString() === socket.user._id.toString()
+                );
+
+                if (!alreadyStarred) {
+                    message.starredBy.push({
+                        userId: socket.user._id
+                    });
+
+                    await message.save();
+                }
+
+                socket.emit("messageStarred", {
+                    groupCode: group.groupCode,
+                    messageId: message._id,
+                    starredBy: socket.user._id,
+                    starredAt: new Date()
+                });
+            } catch (error) {
+                socket.emit("errorMessage", {
+                    message: error.message
+                });
+            }
+        });
+        socket.on("unstarMessage", async(data) => {
+            try {
+                const messageId = data && data.messageId;
+
+                if (!messageId) {
+                    return socket.emit("errorMessage", {
+                        message: "messageId is required"
+                    });
+                }
+
+                const message = await Message.findById(messageId);
+
+                if (!message) {
+                    return socket.emit("errorMessage", {
+                        message: "Message not found"
+                    });
+                }
+
+                const group = await Group.findById(message.groupId);
+
+                if (!group) {
+                    return socket.emit("errorMessage", {
+                        message: "Group not found"
+                    });
+                }
+
+                const isApprovedMember = group.members.some(
+                    (m) =>
+                    m.userId &&
+                    m.userId.toString() === socket.user._id.toString() &&
+                    m.status === "approved"
+                );
+
+                if (!isApprovedMember) {
+                    return socket.emit("errorMessage", {
+                        message: "You are not approved member of this group"
+                    });
+                }
+
+                message.starredBy = message.starredBy.filter(
+                    (star) => star.userId.toString() !== socket.user._id.toString()
+                );
+
+                await message.save();
+
+                socket.emit("messageUnstarred", {
+                    groupCode: group.groupCode,
+                    messageId: message._id,
+                    unstarredBy: socket.user._id
+                });
+            } catch (error) {
+                socket.emit("errorMessage", {
+                    message: error.message
+                });
+            }
+        });
         socket.on("disconnect", () => {
             console.log("User disconnected:", socket.user.fullName);
         });

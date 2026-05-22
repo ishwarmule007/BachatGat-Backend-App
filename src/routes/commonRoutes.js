@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, starGroup, unstarGroup, archiveGroup, unarchiveGroup } = require("../controllers/commonController");
+const { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, archiveGroup, unarchiveGroup } = require("../controllers/commonController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
 
@@ -288,76 +288,6 @@ router.post(
     "/logout",
     authMiddleware,
     logoutUser
-);
-/**
- * @swagger
- * /api/common/groups/{groupId}/star:
- *   patch:
- *     summary: Star a group
- *     tags: [Common]
- *
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: groupId
- *         required: true
- *         schema:
- *           type: string
- *         description: Group ID
- *     responses:
- *       200:
- *         description: Group starred successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Group starred successfully
- *       500:
- *         description: Server error
- */
-router.patch(
-    "/groups/:groupId/star",
-    authMiddleware,
-    starGroup
-);
-
-/**
- * @swagger
- * /api/common/groups/{groupId}/unstar:
- *   patch:
- *     summary: Unstar a group
- *     tags: [Common]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: groupId
- *         required: true
- *         schema:
- *           type: string
- *         description: Group ID
- *     responses:
- *       200:
- *         description: Group unstarred successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Group unstarred successfully
- *       500:
- *         description: Server error
- */
-router.patch(
-    "/groups/:groupId/unstar",
-    authMiddleware,
-    unstarGroup
 );
 
 /**

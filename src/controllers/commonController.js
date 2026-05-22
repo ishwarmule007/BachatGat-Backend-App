@@ -152,9 +152,6 @@ const getMyGroups = async(req, res) => {
                 (id) => id.toString() === group._id.toString()
             ),
 
-            isStarred: user.starredGroups.some(
-                (id) => id.toString() === group._id.toString()
-            ),
             formationDate: group.formationDate,
             totalSaving: group.totalSaving || 0,
             totalLoanGiven: group.totalLoanGiven || 0,
@@ -186,38 +183,6 @@ const logoutUser = async(req, res) => {
             message: "Logout failed",
             error: error.message
         });
-    }
-};
-const starGroup = async(req, res) => {
-    try {
-        const userId = req.user._id;
-        const { groupId } = req.params;
-
-        await User.findByIdAndUpdate(userId, {
-            $addToSet: { starredGroups: groupId },
-        });
-
-        res.status(200).json({
-            message: "Group starred successfully",
-        });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-const unstarGroup = async(req, res) => {
-    try {
-        const userId = req.user._id;
-        const { groupId } = req.params;
-
-        await User.findByIdAndUpdate(userId, {
-            $pull: { starredGroups: groupId },
-        });
-
-        res.status(200).json({
-            message: "Group unstarred successfully",
-        });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
     }
 };
 const archiveGroup = async(req, res) => {
@@ -253,4 +218,4 @@ const unarchiveGroup = async(req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-module.exports = { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, starGroup, unstarGroup, archiveGroup, unarchiveGroup };
+module.exports = { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, archiveGroup, unarchiveGroup };
