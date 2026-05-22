@@ -155,6 +155,9 @@ const getMyGroups = async(req, res) => {
             isStarred: user.starredGroups.some(
                 (id) => id.toString() === group._id.toString()
             ),
+            formationDate: group.formationDate,
+            totalSaving: group.totalSaving || 0,
+            totalLoanGiven: group.totalLoanGiven || 0,
         }));
 
         res.status(200).json({
