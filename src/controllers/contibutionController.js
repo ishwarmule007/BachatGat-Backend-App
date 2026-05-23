@@ -2,7 +2,7 @@ const Group = require("../models/Group");
 const Contribution = require("../models/contribution");
 const PaymentRequest = require("../models/PaymentRequest");
 
-const cloudinary = require("../config/cloud_for_photo");
+const cloudinary = require("../config/cloudinary");
 
 const sharp = require("sharp");
 const streamifier = require("streamifier");

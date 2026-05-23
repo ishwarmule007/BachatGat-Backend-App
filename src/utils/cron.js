@@ -1,13 +1,6 @@
-// ======================
-// 4. CRON JOB
-// ======================
-
 const cron = require("node-cron");
-
 const Message = require("../models/Message");
-
 const cloudinary = require("../config/cloudinary");
-
 cron.schedule("0 * * * *", async() => {
     try {
         console.log(
@@ -32,8 +25,7 @@ cron.schedule("0 * * * *", async() => {
                 await cloudinary.uploader.destroy(
                     msg.cloudinaryPublicId, {
                         resource_type: msg.messageType === "video" ?
-                            "video" :
-                            "image",
+                            "video" : "image",
                     }
                 );
 
