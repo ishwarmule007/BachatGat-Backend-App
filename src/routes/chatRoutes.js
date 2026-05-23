@@ -112,11 +112,18 @@ router.get(
  *
  *       2. sendMessage
  *
- *       2.1 For normal message:
+ *       2.1 For normal text message:
  *       socket.emit("sendMessage", {
  *         groupCode,
  *         message,
  *         messageType
+ *       });
+ *
+ *       Example:
+ *       socket.emit("sendMessage", {
+ *         groupCode: "AtharvS123",
+ *         message: "hello",
+ *         messageType: "text"
  *       });
  *
  *       2.2 For reply message:
@@ -128,6 +135,64 @@ router.get(
  *       });
  *
  *       Here replyTo means old messageId to which user is replying.
+ *
+ *       Example:
+ *       socket.emit("sendMessage", {
+ *         groupCode: "AtharvS123",
+ *         message: "reply test",
+ *         messageType: "text",
+ *         replyTo: "MESSAGE_ID"
+ *       });
+ *
+ *       2.3 For image message:
+ *       socket.emit("sendMessage", {
+ *         groupCode,
+ *         messageType: "image",
+ *         mediaUrl,
+ *         cloudinaryPublicId,
+ *         mediaSize
+ *       });
+ *
+ *       Example:
+ *       socket.emit("sendMessage", {
+ *         groupCode: "AtharvS123",
+ *         messageType: "image",
+ *         mediaUrl: "https://example.com/image.jpg",
+ *         cloudinaryPublicId: "chat-media/image123",
+ *         mediaSize: 900000
+ *       });
+ *
+ *       Image max size allowed: 1 MB
+ *
+ *       2.4 For video message:
+ *       socket.emit("sendMessage", {
+ *         groupCode,
+ *         messageType: "video",
+ *         mediaUrl,
+ *         thumbnailUrl,
+ *         cloudinaryPublicId,
+ *         mediaSize,
+ *         mediaDuration
+ *       });
+ *
+ *       Example:
+ *       socket.emit("sendMessage", {
+ *         groupCode: "AtharvS123",
+ *         messageType: "video",
+ *         mediaUrl: "https://example.com/video.mp4",
+ *         thumbnailUrl: "https://example.com/thumb.jpg",
+ *         cloudinaryPublicId: "chat-media/video123",
+ *         mediaSize: 8000000,
+ *         mediaDuration: 25
+ *       });
+ *
+ *       Video max size allowed: 10 MB
+ *
+ *       Uploaded image/video media automatically expires after 7 days.
+ *       After expiry frontend should show:
+ *       "This photo has expired"
+ *       or
+ *       "This video has expired"
  *
  *       3. deleteMessage
  *       socket.emit("deleteMessage", {
@@ -150,6 +215,12 @@ router.get(
  *         emoji
  *       });
  *
+ *       Example:
+ *       socket.emit("reactMessage", {
+ *         messageId,
+ *         emoji: "🔥"
+ *       });
+ *
  *       7. removeReaction
  *       socket.emit("removeReaction", {
  *         messageId
@@ -168,14 +239,23 @@ router.get(
  *       Listen Events:
  *
  *       1. joinedGroup
+ *
  *       2. receiveMessage
+ *
  *       3. messageDeleted
+ *
  *       4. messagePinned
+ *
  *       5. messageUnpinned
+ *
  *       6. errorMessage
+ *
  *       7. messageReacted
+ *
  *       8. messageReactionRemoved
+ *
  *       9. messageStarred
+ *
  *       10. messageUnstarred
  *     tags:
  *       - Socket Events
