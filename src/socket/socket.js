@@ -99,18 +99,52 @@ const initializeSocket = (server) => {
                 });
             }
         });
+        const MAX_IMAGE_SIZE = 1 * 1024 * 1024;
+        const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
+
         socket.on("sendMessage", async(data) => {
             try {
                 const groupCode = data && data.groupCode;
                 const message = data && data.message;
                 const messageType = data && data.messageType;
-                const replyTo = data && data.replyTo;
+
+                const mediaUrl = data && data.mediaUrl;
+                const thumbnailUrl = data && data.thumbnailUrl;
+                const cloudinaryPublicId = data && data.cloudinaryPublicId;
+                const mediaSize = data && data.mediaSize;
+                const mediaDuration = data && data.mediaDuration;
 
                 const cleanGroupCode = String(groupCode || "").trim();
 
-                if (!cleanGroupCode || !message) {
+                if (!cleanGroupCode) {
                     return socket.emit("errorMessage", {
-                        message: "groupCode and message are required",
+                        message: "groupCode is required",
+                    });
+                }
+
+                if (!message &&
+                    !mediaUrl
+                ) {
+                    return socket.emit("errorMessage", {
+                        message: "message or mediaUrl is required",
+                    });
+                }
+
+                if (
+                    messageType === "image" &&
+                    mediaSize > MAX_IMAGE_SIZE
+                ) {
+                    return socket.emit("errorMessage", {
+                        message: "Image size should be less than or equal to 1 MB",
+                    });
+                }
+
+                if (
+                    messageType === "video" &&
+                    mediaSize > MAX_VIDEO_SIZE
+                ) {
+                    return socket.emit("errorMessage", {
+                        message: "Video size should be less than or equal to 10 MB",
                     });
                 }
 
@@ -137,53 +171,53 @@ const initializeSocket = (server) => {
                     });
                 }
 
-                let replyData = {
-                    messageId: null,
-                    message: "",
-                    senderName: "",
-                    messageType: "text",
-                };
-
-                if (replyTo) {
-                    const oldMessage = await Message.findOne({
-                        _id: replyTo,
-                        groupId: group._id,
-                    }).populate("senderId", "fullName");
-
-                    if (!oldMessage) {
-                        return socket.emit("errorMessage", {
-                            message: "Reply message not found in this group",
-                        });
-                    }
-
-                    replyData = {
-                        messageId: oldMessage._id,
-                        message: oldMessage.isDeleted ?
-                            "This message was deleted" : oldMessage.message,
-                        senderName: oldMessage.senderId ? oldMessage.senderId.fullName || "Unknown" : "Unknown",
-                        messageType: oldMessage.messageType || "text",
-                    };
-                }
+                const mediaExpireDate =
+                    messageType === "image" ||
+                    messageType === "video" ?
+                    new Date(
+                        Date.now() +
+                        7 * 24 * 60 * 60 * 1000
+                    ) :
+                    null;
 
                 const newMessage = await Message.create({
                     groupId: group._id,
                     senderId: socket.user._id,
+
                     messageType: messageType || "text",
-                    message,
-                    replyTo: replyData,
+
+                    message: message || "",
+
+                    mediaUrl: mediaUrl || "",
+
+                    thumbnailUrl: thumbnailUrl || "",
+
+                    cloudinaryPublicId: cloudinaryPublicId || "",
+
+                    mediaSize: mediaSize || 0,
+
+                    mediaDuration: mediaDuration || 0,
+
+                    mediaExpiresAt: mediaExpireDate,
+
                     readBy: [{
                         userId: socket.user._id,
                     }, ],
                 });
 
-                const populatedMessage = await Message.findById(newMessage._id).populate(
-                    "senderId",
-                    "fullName mobileNumber roleSelection"
-                );
+                const populatedMessage =
+                    await Message.findById(newMessage._id)
+                    .populate(
+                        "senderId",
+                        "fullName mobileNumber roleSelection"
+                    );
 
                 socket.join(cleanGroupCode);
 
-                io.to(cleanGroupCode).emit("receiveMessage", populatedMessage);
+                io.to(cleanGroupCode).emit(
+                    "receiveMessage",
+                    populatedMessage
+                );
             } catch (error) {
                 socket.emit("errorMessage", {
                     message: error.message,

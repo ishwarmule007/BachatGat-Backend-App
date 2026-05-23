@@ -98,6 +98,45 @@ const messageSchema = new mongoose.Schema({
             default: Date.now
         }
     }],
+    mediaUrl: {
+        type: String,
+        default: ""
+    },
+
+    thumbnailUrl: {
+        type: String,
+        default: ""
+    },
+
+    cloudinaryPublicId: {
+        type: String,
+        default: ""
+    },
+
+    mediaSize: {
+        type: Number,
+        default: 0
+    },
+
+    mediaDuration: {
+        type: Number,
+        default: 0
+    },
+
+    mediaExpiresAt: {
+        type: Date,
+        default: null
+    },
+
+    mediaExpiredAt: {
+        type: Date,
+        default: null
+    },
+
+    isMediaExpired: {
+        type: Boolean,
+        default: false
+    },
     readBy: [{
         userId: {
             type: mongoose.Schema.Types.ObjectId,
