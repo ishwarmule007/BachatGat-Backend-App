@@ -109,7 +109,91 @@ const clearChatForMe = async(req, res) => {
     }
 };
 
+const uploadChatMedia = async(req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                message: "File is required",
+            });
+        }
+
+        const file = req.file;
+
+        const isImage =
+            file.mimetype.startsWith("image");
+
+        const isVideo =
+            file.mimetype.startsWith("video");
+
+        if (!isImage && !isVideo) {
+            return res.status(400).json({
+                message: "Only image and video files are allowed",
+            });
+        }
+
+        if (
+            isImage &&
+            file.size > 1 * 1024 * 1024
+        ) {
+            return res.status(400).json({
+                message: "Image size should be less than or equal to 1 MB",
+            });
+        }
+
+        if (
+            isVideo &&
+            file.size > 10 * 1024 * 1024
+        ) {
+            return res.status(400).json({
+                message: "Video size should be less than or equal to 10 MB",
+            });
+        }
+
+        const uploadResult =
+            await new Promise((resolve, reject) => {
+                const uploadStream =
+                    cloudinary.uploader.upload_stream({
+                            folder: "chat-media",
+
+                            resource_type: isVideo ?
+                                "video" : "image",
+                        },
+                        (error, result) => {
+                            if (error) {
+                                return reject(error);
+                            }
+
+                            resolve(result);
+                        }
+                    );
+
+                streamifier
+                    .createReadStream(file.buffer)
+                    .pipe(uploadStream);
+            });
+
+        return res.status(200).json({
+            message: "Media uploaded successfully",
+
+            mediaUrl: uploadResult.secure_url,
+
+            cloudinaryPublicId: uploadResult.public_id,
+
+            mediaSize: file.size,
+
+            messageType: isVideo ?
+                "video" : "image",
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: "Failed to upload media",
+
+            error: error.message,
+        });
+    }
+};
 module.exports = {
     getGroupMessages,
-    clearChatForMe
+    clearChatForMe,
+    uploadChatMedia
 };

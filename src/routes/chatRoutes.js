@@ -1,12 +1,13 @@
 const express = require("express");
-
+const upload = require("../middlewares/uploadMiddleware");
+const cloudinary = require("../config/cloudinary");
+const streamifier = require("streamifier");
+const authMiddleware = require("../middlewares/authMiddleware");
 const {
     getGroupMessages,
-    clearChatForMe
+    clearChatForMe,
+    uploadChatMedia
 } = require("../controllers/chatController");
-
-const authMiddleware = require("../middlewares/authMiddleware");
-
 const router = express.Router();
 /**
  * @swagger
@@ -325,5 +326,51 @@ router.delete(
     "/groups/:groupCode/clear-chat",
     authMiddleware,
     clearChatForMe
+);
+/**
+ * @swagger
+ * /api/chat/upload-media:
+ *   post:
+ *     summary: Upload chat image or video
+ *     tags:
+ *       - Chat
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               media:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Media uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Media uploaded successfully
+ *                 mediaUrl:
+ *                   type: string
+ *                 cloudinaryPublicId:
+ *                   type: string
+ *                 mediaSize:
+ *                   type: number
+ *                 messageType:
+ *                   type: string
+ *                   example: image
+ */
+router.post(
+    "/upload-media",
+    authMiddleware,
+    upload.single("media"),
+    uploadChatMedia
 );
 module.exports = router;
