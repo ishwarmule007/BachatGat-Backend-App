@@ -1,6 +1,6 @@
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
-
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const Group = require("../models/Group");
 const Message = require("../models/Message");
@@ -53,221 +53,299 @@ const initializeSocket = (server) => {
     io.on("connection", (socket) => {
         console.log("User connected:", socket.user.fullName);
 
-        const MAX_IMAGE_SIZE = 1 * 1024 * 1024;
+        const MAX_IMAGE_SIZE =
+            1 * 1024 * 1024;
 
-        const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
+        const MAX_VIDEO_SIZE =
+            10 * 1024 * 1024;
 
-        const MAX_AUDIO_SIZE = 2 * 1024 * 1024;
+        const MAX_AUDIO_SIZE =
+            2 * 1024 * 1024;
 
-        socket.on("sendMessage", async(data) => {
+        socket.on(
+            "sendMessage",
+            async(data) => {
 
-            try {
+                try {
 
-                const groupCode =
-                    data && data.groupCode;
+                    const groupCode =
+                        data && data.groupCode;
 
-                const message =
-                    data && data.message;
+                    const message =
+                        data && data.message;
 
-                const messageType =
-                    data && data.messageType;
+                    const messageType =
+                        data && data.messageType;
 
-                const mediaUrl =
-                    data && data.mediaUrl;
+                    const mediaUrl =
+                        data && data.mediaUrl;
 
-                const thumbnailUrl =
-                    data && data.thumbnailUrl;
+                    const thumbnailUrl =
+                        data && data.thumbnailUrl;
 
-                const cloudinaryPublicId =
-                    data && data.cloudinaryPublicId;
+                    const cloudinaryPublicId =
+                        data &&
+                        data.cloudinaryPublicId;
 
-                const mediaSize =
-                    data && data.mediaSize;
+                    const mediaSize =
+                        data && data.mediaSize;
 
-                const mediaDuration =
-                    data && data.mediaDuration;
+                    const mediaDuration =
+                        data &&
+                        data.mediaDuration;
 
-                const audioDuration =
-                    data && data.audioDuration;
+                    const audioDuration =
+                        data &&
+                        data.audioDuration;
 
-                const replyTo =
-                    data && data.replyTo;
+                    const replyTo =
+                        data && data.replyTo;
 
-                const cleanGroupCode =
-                    String(groupCode || "").trim();
+                    const cleanGroupCode =
+                        String(
+                            groupCode || ""
+                        ).trim();
 
-                if (!cleanGroupCode) {
+                    // VALIDATION
+                    if (!cleanGroupCode) {
 
-                    return socket.emit(
-                        "errorMessage", {
-                            message: "groupCode is required",
-                        }
-                    );
-                }
-
-                if (!message &&
-                    !mediaUrl
-                ) {
-
-                    return socket.emit(
-                        "errorMessage", {
-                            message: "message or mediaUrl is required",
-                        }
-                    );
-                }
-
-                // IMAGE LIMIT
-                if (
-                    messageType === "image" &&
-                    mediaSize > MAX_IMAGE_SIZE
-                ) {
-
-                    return socket.emit(
-                        "errorMessage", {
-                            message: "Image size should be less than or equal to 1 MB",
-                        }
-                    );
-                }
-
-                // VIDEO LIMIT
-                if (
-                    messageType === "video" &&
-                    mediaSize > MAX_VIDEO_SIZE
-                ) {
-
-                    return socket.emit(
-                        "errorMessage", {
-                            message: "Video size should be less than or equal to 10 MB",
-                        }
-                    );
-                }
-
-                // AUDIO LIMIT
-                if (
-                    messageType === "audio" &&
-                    mediaSize > MAX_AUDIO_SIZE
-                ) {
-
-                    return socket.emit(
-                        "errorMessage", {
-                            message: "Audio size should be less than or equal to 2 MB",
-                        }
-                    );
-                }
-
-                const group =
-                    await Group.findOne({
-                        groupCode: cleanGroupCode,
-                    });
-
-                if (!group) {
-
-                    return socket.emit(
-                        "errorMessage", {
-                            message: "Group not found",
-                        }
-                    );
-                }
-
-                const isApprovedMember =
-                    group.members.some(
-                        (m) =>
-                        m.userId &&
-                        m.userId.toString() ===
-                        socket.user._id.toString() &&
-                        m.status === "approved"
-                    );
-
-                if (!isApprovedMember) {
-
-                    return socket.emit(
-                        "errorMessage", {
-                            message: "You are not approved member of this group",
-                        }
-                    );
-                }
-
-                // 7 DAYS MEDIA EXPIRY
-                const mediaExpireDate =
-                    messageType === "image" ||
-                    messageType === "video" ||
-                    messageType === "audio" ?
-                    new Date(
-                        Date.now() +
-                        7 *
-                        24 *
-                        60 *
-                        60 *
-                        1000
-                    ) :
-                    null;
-
-                const newMessage =
-                    await Message.create({
-
-                        groupId: group._id,
-
-                        senderId: socket.user._id,
-
-                        messageType: messageType || "text",
-
-                        message: message || "",
-
-                        mediaUrl: mediaUrl || "",
-
-                        thumbnailUrl: thumbnailUrl || "",
-
-                        cloudinaryPublicId: cloudinaryPublicId || "",
-
-                        mediaSize: mediaSize || 0,
-
-                        mediaDuration: mediaDuration || 0,
-
-                        audioDuration: audioDuration || 0,
-
-                        mediaExpiresAt: mediaExpireDate,
-
-                        replyTo: replyTo || null,
-
-                        readBy: [{
-                            userId: socket.user._id,
-                        }, ],
-                    });
-
-                const populatedMessage =
-                    await Message.findById(
-                        newMessage._id
-                    )
-                    .populate(
-                        "senderId",
-                        "fullName mobileNumber roleSelection"
-                    )
-                    .populate({
-                        path: "replyTo",
-                        populate: {
-                            path: "senderId",
-                            select: "fullName"
-                        }
-                    });
-
-                socket.join(
-                    cleanGroupCode
-                );
-
-                io.to(cleanGroupCode).emit(
-                    "receiveMessage",
-                    populatedMessage
-                );
-
-            } catch (error) {
-
-                socket.emit(
-                    "errorMessage", {
-                        message: error.message,
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "groupCode is required",
+                            }
+                        );
                     }
-                );
+
+                    const allowedMessageTypes = [
+                        "text",
+                        "image",
+                        "video",
+                        "audio",
+                    ];
+
+                    if (
+                        messageType &&
+                        !allowedMessageTypes.includes(
+                            messageType
+                        )
+                    ) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "Invalid message type",
+                            }
+                        );
+                    }
+
+                    if (!message &&
+                        !mediaUrl
+                    ) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "message or mediaUrl is required",
+                            }
+                        );
+                    }
+
+                    // IMAGE SIZE
+                    if (
+                        messageType ===
+                        "image" &&
+                        mediaSize >
+                        MAX_IMAGE_SIZE
+                    ) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "Image size should be less than or equal to 1 MB",
+                            }
+                        );
+                    }
+
+                    // VIDEO SIZE
+                    if (
+                        messageType ===
+                        "video" &&
+                        mediaSize >
+                        MAX_VIDEO_SIZE
+                    ) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "Video size should be less than or equal to 10 MB",
+                            }
+                        );
+                    }
+
+                    // AUDIO SIZE
+                    if (
+                        messageType ===
+                        "audio" &&
+                        mediaSize >
+                        MAX_AUDIO_SIZE
+                    ) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "Audio size should be less than or equal to 2 MB",
+                            }
+                        );
+                    }
+
+                    // CHECK GROUP
+                    const group =
+                        await Group.findOne({
+                            groupCode: cleanGroupCode,
+                        });
+
+                    if (!group) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "Group not found",
+                            }
+                        );
+                    }
+
+                    // CHECK MEMBER
+                    const isApprovedMember =
+                        group.members.some(
+                            (m) =>
+                            m.userId &&
+                            m.userId.toString() ===
+                            socket.user._id.toString() &&
+                            m.status ===
+                            "approved"
+                        );
+
+                    if (!isApprovedMember) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "You are not approved member of this group",
+                            }
+                        );
+                    }
+
+                    // REPLY VALIDATION
+                    if (
+                        replyTo &&
+                        !mongoose.Types.ObjectId.isValid(
+                            replyTo
+                        )
+                    ) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "Invalid reply message id",
+                            }
+                        );
+                    }
+
+                    // MEDIA EXPIRY
+                    const mediaExpireDate =
+                        messageType ===
+                        "image" ||
+                        messageType ===
+                        "video" ||
+                        messageType ===
+                        "audio" ?
+                        new Date(
+                            Date.now() +
+                            7 *
+                            24 *
+                            60 *
+                            60 *
+                            1000
+                        ) :
+                        null;
+
+                    // CREATE MESSAGE
+                    const newMessage =
+                        await Message.create({
+                            groupId: group._id,
+
+                            senderId: socket.user
+                                ._id,
+
+                            messageType: messageType ||
+                                "text",
+
+                            message: message || "",
+
+                            mediaUrl: mediaUrl || "",
+
+                            thumbnailUrl: thumbnailUrl ||
+                                "",
+
+                            cloudinaryPublicId: cloudinaryPublicId ||
+                                "",
+
+                            mediaSize: mediaSize || 0,
+
+                            mediaDuration: messageType ===
+                                "video" ?
+                                mediaDuration ||
+                                0 : 0,
+
+                            audioDuration: messageType ===
+                                "audio" ?
+                                audioDuration ||
+                                0 : 0,
+
+                            mediaExpiresAt: mediaExpireDate,
+
+                            replyTo: replyTo ||
+                                null,
+
+                            readBy: [{
+                                userId: socket
+                                    .user
+                                    ._id,
+                            }, ],
+                        });
+
+                    // POPULATE
+                    const populatedMessage =
+                        await Message.findById(
+                            newMessage._id
+                        )
+                        .populate(
+                            "senderId",
+                            "fullName mobileNumber roleSelection"
+                        )
+                        .populate({
+                            path: "replyTo",
+                            populate: {
+                                path: "senderId",
+                                select: "fullName",
+                            },
+                        });
+
+                    // JOIN ROOM
+                    socket.join(
+                        cleanGroupCode
+                    );
+
+                    // SEND MESSAGE
+                    io.to(
+                        cleanGroupCode
+                    ).emit(
+                        "receiveMessage",
+                        populatedMessage
+                    );
+
+                } catch (error) {
+
+                    socket.emit(
+                        "errorMessage", {
+                            message: error.message,
+                        }
+                    );
+                }
             }
-        });
+        );
 
         socket.on("deleteMessage", async(data) => {
             try {

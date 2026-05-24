@@ -128,10 +128,11 @@ const uploadChatMedia = async(req, res) => {
 
         const isVideo =
             file.mimetype.startsWith("video");
-
-        if (!isImage && !isVideo) {
+        const isAudio =
+            file.mimetype.startsWith("audio");
+        if (!isImage && !isVideo && !isAudio) {
             return res.status(400).json({
-                message: "Only image and video files are allowed",
+                message: "Only image, video, and audio files are allowed",
             });
         }
 
@@ -152,14 +153,21 @@ const uploadChatMedia = async(req, res) => {
                 message: "Video size should be less than or equal to 10 MB",
             });
         }
-
+        if (
+            isAudio &&
+            file.size > 2 * 1024 * 1024
+        ) {
+            return res.status(400).json({
+                message: "Audio size should be less than or equal to 2 MB",
+            });
+        }
         const uploadResult =
             await new Promise((resolve, reject) => {
                 const uploadStream =
                     cloudinary.uploader.upload_stream({
                             folder: "chat-media",
 
-                            resource_type: isVideo ?
+                            resource_type: isVideo || isAudio ?
                                 "video" : "image",
                         },
                         (error, result) => {
@@ -185,8 +193,9 @@ const uploadChatMedia = async(req, res) => {
 
             mediaSize: file.size,
 
-            messageType: isVideo ?
-                "video" : "image",
+            messageType: isImage ?
+                "image" : isVideo ?
+                "video" : "audio",
         });
     } catch (error) {
         return res.status(500).json({
@@ -196,82 +205,9 @@ const uploadChatMedia = async(req, res) => {
         });
     }
 };
-const uploadAudio =
-    async(req, res) => {
 
-        try {
-
-            if (!req.file) {
-
-                return res.status(400).json({
-                    message: "Audio file is required"
-                });
-            }
-
-            const streamUpload =
-                () => {
-
-                    return new Promise(
-                        (resolve, reject) => {
-
-                            const stream =
-                                cloudinary.uploader.upload_stream({
-                                        folder: "chat-audios",
-                                        resource_type: "video"
-                                    },
-                                    (error, result) => {
-
-                                        if (result) {
-
-                                            resolve(result);
-
-                                        } else {
-
-                                            reject(error);
-                                        }
-                                    }
-                                );
-
-                            streamifier
-                                .createReadStream(
-                                    req.file.buffer
-                                )
-                                .pipe(stream);
-                        }
-                    );
-                };
-
-            const result =
-                await streamUpload();
-
-            const expiresAt =
-                new Date(
-                    Date.now() +
-                    7 * 24 * 60 * 60 * 1000
-                );
-
-            res.status(200).json({
-
-                message: "Audio uploaded successfully",
-
-                mediaUrl: result.secure_url,
-
-                mediaPublicId: result.public_id,
-
-                mediaExpiresAt: expiresAt
-            });
-
-        } catch (error) {
-
-            res.status(500).json({
-                message: "Failed to upload audio",
-                error: error.message
-            });
-        }
-    };
 module.exports = {
     getGroupMessages,
     clearChatForMe,
-    uploadChatMedia,
-    uploadAudio
+    uploadChatMedia
 };

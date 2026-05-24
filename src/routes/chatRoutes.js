@@ -6,8 +6,7 @@ const authMiddleware = require("../middlewares/authMiddleware");
 const {
     getGroupMessages,
     clearChatForMe,
-    uploadChatMedia,
-    uploadAudio
+    uploadChatMedia
 } = require("../controllers/chatController");
 const router = express.Router();
 /**
@@ -432,87 +431,5 @@ router.post(
     upload.single("media"),
     uploadChatMedia
 );
-/**
- * @swagger
- * /api/chat/upload-audio:
- *   post:
- *     summary: Upload voice note/audio for chat
- *     description: |
- *       Upload audio file to Cloudinary.
- *       Returned mediaUrl should be used in sendMessage socket event.
- *
- *       Supported formats:
- *       - mp3
- *       - wav
- *       - m4a
- *       - ogg
- *
- *       Maximum audio size:
- *       - 2 MB
- *
- *       Audio files expire after 7 days from chat automatically.
- *
- *     tags:
- *       - Chat Media Upload
- *
- *     security:
- *       - bearerAuth: []
- *
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             required:
- *               - media
- *             properties:
- *               media:
- *                 type: string
- *                 format: binary
- *                 description: Audio file
- *
- *     responses:
- *       200:
- *         description: Audio uploaded successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Audio uploaded successfully
- *
- *                 mediaUrl:
- *                   type: string
- *                   example: https://res.cloudinary.com/demo/video/upload/audio.mp3
- *
- *                 cloudinaryPublicId:
- *                   type: string
- *                   example: chat/audio/abc123
- *
- *                 mediaSize:
- *                   type: number
- *                   example: 300000
- *
- *                 audioDuration:
- *                   type: number
- *                   example: 18
- *
- *       400:
- *         description: Invalid audio file
- *
- *       401:
- *         description: Unauthorized
- *
- *       500:
- *         description: Failed to upload audio
- */
-router.post(
-    "/upload-audio",
-    authMiddleware,
-    upload.single("media"),
-    uploadAudio
-);
+
 module.exports = router;
