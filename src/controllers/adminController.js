@@ -15,9 +15,11 @@ const registerAdmin = async(req, res) => {
             mobileNumber,
             password,
             gender,
+            dateOfBirth,
+            address,
             loginType
         } = req.body;
-        if (!fullName || !mobileNumber || !gender || !loginType) {
+        if (!fullName || !mobileNumber || !gender || !loginType || !dateOfBirth || !address) {
             return res.status(400).json({
                 message: "Missing required fields"
             });
@@ -55,6 +57,8 @@ const registerAdmin = async(req, res) => {
             roleSelection: "admin",
             loginType,
             gender,
+            address,
+            dateOfBirth,
             groupIds: []
         });
 
