@@ -52,6 +52,62 @@ const initializeSocket = (server) => {
 
     io.on("connection", (socket) => {
         console.log("User connected:", socket.user.fullName);
+        // JOIN GROUP
+        socket.on("joinGroup", async(data) => {
+            try {
+
+                const groupCode = data && data.groupCode;
+
+                const cleanGroupCode = String(groupCode || "").trim();
+
+                if (!cleanGroupCode) {
+                    return socket.emit("errorMessage", {
+                        message: "groupCode is required"
+                    });
+                }
+
+                const group = await Group.findOne({
+                    groupCode: cleanGroupCode
+                });
+
+                if (!group) {
+                    return socket.emit("errorMessage", {
+                        message: "Group not found"
+                    });
+                }
+
+                const isApprovedMember = group.members.some(
+                    (m) =>
+                    m.userId &&
+                    m.userId.toString() === socket.user._id.toString() &&
+                    m.status === "approved"
+                );
+
+                if (!isApprovedMember) {
+                    return socket.emit("errorMessage", {
+                        message: "You are not approved member of this group"
+                    });
+                }
+
+                socket.join(cleanGroupCode);
+
+                socket.emit("groupJoined", {
+                    success: true,
+                    groupCode: cleanGroupCode,
+                    message: `Joined group ${cleanGroupCode}`
+                });
+
+                console.log(
+                    `${socket.user.fullName} joined ${cleanGroupCode}`
+                );
+
+            } catch (error) {
+
+                socket.emit("errorMessage", {
+                    message: error.message
+                });
+            }
+        });
 
         const MAX_IMAGE_SIZE =
             1 * 1024 * 1024;
