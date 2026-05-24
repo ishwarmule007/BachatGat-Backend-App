@@ -2,12 +2,10 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 
-const Location = require("../models/Location");
+const Location = require("../models/location");
 
 const router = express.Router();
 
-
-// Upload locations
 router.post("/upload-locations", async(req, res) => {
     try {
 
@@ -58,8 +56,6 @@ router.post("/upload-locations", async(req, res) => {
     }
 });
 
-
-// Get all states
 router.get("/states", async(req, res) => {
     try {
 
@@ -80,8 +76,6 @@ router.get("/states", async(req, res) => {
     }
 });
 
-
-// Get districts
 router.get("/districts/:state", async(req, res) => {
     try {
 
@@ -107,8 +101,7 @@ router.get("/districts/:state", async(req, res) => {
 });
 
 
-// Get subdistricts
-router.get("/subdistricts", async(req, res) => {
+router.get("/taluka", async(req, res) => {
     try {
 
         const { state, district } = req.query;
