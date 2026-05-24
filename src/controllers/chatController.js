@@ -1,7 +1,11 @@
 const Group = require("../models/Group");
 const Message = require("../models/Message");
 const ChatClear = require("../models/ChatClear");
+const cloudinary =
+    require("../config/cloudinary");
 
+const streamifier =
+    require("streamifier");
 const getGroupMessages = async(req, res) => {
     try {
         const { groupCode } = req.params;
@@ -192,8 +196,82 @@ const uploadChatMedia = async(req, res) => {
         });
     }
 };
+const uploadAudio =
+    async(req, res) => {
+
+        try {
+
+            if (!req.file) {
+
+                return res.status(400).json({
+                    message: "Audio file is required"
+                });
+            }
+
+            const streamUpload =
+                () => {
+
+                    return new Promise(
+                        (resolve, reject) => {
+
+                            const stream =
+                                cloudinary.uploader.upload_stream({
+                                        folder: "chat-audios",
+                                        resource_type: "video"
+                                    },
+                                    (error, result) => {
+
+                                        if (result) {
+
+                                            resolve(result);
+
+                                        } else {
+
+                                            reject(error);
+                                        }
+                                    }
+                                );
+
+                            streamifier
+                                .createReadStream(
+                                    req.file.buffer
+                                )
+                                .pipe(stream);
+                        }
+                    );
+                };
+
+            const result =
+                await streamUpload();
+
+            const expiresAt =
+                new Date(
+                    Date.now() +
+                    7 * 24 * 60 * 60 * 1000
+                );
+
+            res.status(200).json({
+
+                message: "Audio uploaded successfully",
+
+                mediaUrl: result.secure_url,
+
+                mediaPublicId: result.public_id,
+
+                mediaExpiresAt: expiresAt
+            });
+
+        } catch (error) {
+
+            res.status(500).json({
+                message: "Failed to upload audio",
+                error: error.message
+            });
+        }
+    };
 module.exports = {
     getGroupMessages,
     clearChatForMe,
-    uploadChatMedia
+    uploadChatMedia,
+    uploadAudio
 };

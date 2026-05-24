@@ -6,7 +6,8 @@ const authMiddleware = require("../middlewares/authMiddleware");
 const {
     getGroupMessages,
     clearChatForMe,
-    uploadChatMedia
+    uploadChatMedia,
+    uploadAudio
 } = require("../controllers/chatController");
 const router = express.Router();
 /**
@@ -95,25 +96,29 @@ router.get(
 );
 /**
  * @swagger
- * /api/chat/socket-events:
+ * /api/chat/socket_events_documentation:
  *   get:
  *     summary: Socket.IO chat events documentation
  *     description: |
- *       This route is only for documentation.
- *       It is not used in frontend API calls.
+ *       This route is only for Socket.IO event documentation.
+ *       Frontend should not call this API in actual chat flow.
  *
- *       Socket Events
- *
- *       Emit Events:
+ *       -----------------------------------
+ *       SOCKET EMIT EVENTS
+ *       -----------------------------------
  *
  *       1. joinGroup
+ *
  *       socket.emit("joinGroup", {
  *         groupCode
  *       });
  *
+ *       -----------------------------------
+ *
  *       2. sendMessage
  *
- *       2.1 For normal text message:
+ *       2.1 Normal Text Message
+ *
  *       socket.emit("sendMessage", {
  *         groupCode,
  *         message,
@@ -121,13 +126,17 @@ router.get(
  *       });
  *
  *       Example:
- *       socket.emit("sendMessage", {
- *         groupCode: "AtharvS123",
- *         message: "hello",
- *         messageType: "text"
- *       });
  *
- *       2.2 For reply message:
+ *       {
+ *         "groupCode": "SBG-001",
+ *         "message": "Hello",
+ *         "messageType": "text"
+ *       }
+ *
+ *       -----------------------------------
+ *
+ *       2.2 Reply Message
+ *
  *       socket.emit("sendMessage", {
  *         groupCode,
  *         message,
@@ -135,40 +144,41 @@ router.get(
  *         replyTo
  *       });
  *
- *       Here replyTo means old messageId to which user is replying.
+ *       replyTo = old messageId
  *
- *       Example:
- *       socket.emit("sendMessage", {
- *         groupCode: "AtharvS123",
- *         message: "reply test",
- *         messageType: "text",
- *         replyTo: "MESSAGE_ID"
- *       });
+ *       -----------------------------------
  *
- *       2.3 For image message:
+ *       2.3 Image Message
+ *
  *       socket.emit("sendMessage", {
  *         groupCode,
- *         messageType: "image",
+ *         messageType,
  *         mediaUrl,
  *         cloudinaryPublicId,
  *         mediaSize
  *       });
  *
  *       Example:
- *       socket.emit("sendMessage", {
- *         groupCode: "AtharvS123",
- *         messageType: "image",
- *         mediaUrl: "https://example.com/image.jpg",
- *         cloudinaryPublicId: "chat-media/image123",
- *         mediaSize: 900000
- *       });
  *
- *       Image max size allowed: 1 MB
+ *       {
+ *         "groupCode": "SBG-001",
+ *         "messageType": "image",
+ *         "mediaUrl": "https://cloudinary-url",
+ *         "cloudinaryPublicId": "chat/images/abc123",
+ *         "mediaSize": 500000
+ *       }
  *
- *       2.4 For video message:
+ *       Image max size = 1 MB
+ *
+ *       Images expire after 7 days.
+ *
+ *       -----------------------------------
+ *
+ *       2.4 Video Message
+ *
  *       socket.emit("sendMessage", {
  *         groupCode,
- *         messageType: "video",
+ *         messageType,
  *         mediaUrl,
  *         thumbnailUrl,
  *         cloudinaryPublicId,
@@ -177,67 +187,113 @@ router.get(
  *       });
  *
  *       Example:
+ *
+ *       {
+ *         "groupCode": "SBG-001",
+ *         "messageType": "video",
+ *         "mediaUrl": "https://cloudinary-video-url",
+ *         "thumbnailUrl": "https://thumbnail-url",
+ *         "cloudinaryPublicId": "chat/videos/abc123",
+ *         "mediaSize": 5000000,
+ *         "mediaDuration": 25
+ *       }
+ *
+ *       Video max size = 10 MB
+ *
+ *       Videos expire after 7 days.
+ *
+ *       -----------------------------------
+ *
+ *       2.5 Voice Note / Audio Message
+ *
  *       socket.emit("sendMessage", {
- *         groupCode: "AtharvS123",
- *         messageType: "video",
- *         mediaUrl: "https://example.com/video.mp4",
- *         thumbnailUrl: "https://example.com/thumb.jpg",
- *         cloudinaryPublicId: "chat-media/video123",
- *         mediaSize: 8000000,
- *         mediaDuration: 25
+ *         groupCode,
+ *         messageType,
+ *         mediaUrl,
+ *         cloudinaryPublicId,
+ *         mediaSize,
+ *         audioDuration
  *       });
  *
- *       Video max size allowed: 10 MB
+ *       Example:
  *
- *       Uploaded image/video media automatically expires after 7 days.
- *       After expiry frontend should show:
- *       "This photo has expired"
- *       or
- *       "This video has expired"
+ *       {
+ *         "groupCode": "SBG-001",
+ *         "messageType": "audio",
+ *         "mediaUrl": "https://cloudinary-audio-url",
+ *         "cloudinaryPublicId": "chat/audio/abc123",
+ *         "mediaSize": 300000,
+ *         "audioDuration": 18
+ *       }
+ *
+ *       Audio max size = 2 MB
+ *
+ *       Audio expires after 7 days.
+ *
+ *       Audio should be uploaded in Cloudinary using:
+ *
+ *       resource_type = "video"
+ *
+ *       -----------------------------------
  *
  *       3. deleteMessage
+ *
  *       socket.emit("deleteMessage", {
  *         messageId
  *       });
  *
+ *       -----------------------------------
+ *
  *       4. pinMessage
+ *
  *       socket.emit("pinMessage", {
  *         messageId
  *       });
  *
+ *       -----------------------------------
+ *
  *       5. unpinMessage
+ *
  *       socket.emit("unpinMessage", {
  *         messageId
  *       });
  *
+ *       -----------------------------------
+ *
  *       6. reactMessage
+ *
  *       socket.emit("reactMessage", {
  *         messageId,
  *         emoji
  *       });
  *
- *       Example:
- *       socket.emit("reactMessage", {
- *         messageId,
- *         emoji: "🔥"
- *       });
+ *       -----------------------------------
  *
  *       7. removeReaction
+ *
  *       socket.emit("removeReaction", {
  *         messageId
  *       });
  *
+ *       -----------------------------------
+ *
  *       8. starMessage
+ *
  *       socket.emit("starMessage", {
  *         messageId
  *       });
  *
+ *       -----------------------------------
+ *
  *       9. unstarMessage
+ *
  *       socket.emit("unstarMessage", {
  *         messageId
  *       });
  *
- *       Listen Events:
+ *       -----------------------------------
+ *       SOCKET LISTEN EVENTS
+ *       -----------------------------------
  *
  *       1. joinedGroup
  *
@@ -258,15 +314,18 @@ router.get(
  *       9. messageStarred
  *
  *       10. messageUnstarred
+ * 
  *     tags:
  *       - Socket Events
+ *
  *     responses:
  *       200:
- *         description: Socket.IO event documentation
+ *         description: Socket.IO events documentation fetched successfully
  */
 router.get("/socket_events_documentation", (req, res) => {
     res.status(200).json({
-        message: "socket event documentation"
+        message: "Socket.IO events documentation fetched successfully",
+        documentation: "Check the API description for details"
     });
 });
 
@@ -372,5 +431,88 @@ router.post(
     authMiddleware,
     upload.single("media"),
     uploadChatMedia
+);
+/**
+ * @swagger
+ * /api/chat/upload-audio:
+ *   post:
+ *     summary: Upload voice note/audio for chat
+ *     description: |
+ *       Upload audio file to Cloudinary.
+ *       Returned mediaUrl should be used in sendMessage socket event.
+ *
+ *       Supported formats:
+ *       - mp3
+ *       - wav
+ *       - m4a
+ *       - ogg
+ *
+ *       Maximum audio size:
+ *       - 2 MB
+ *
+ *       Audio files expire after 7 days from chat automatically.
+ *
+ *     tags:
+ *       - Chat Media Upload
+ *
+ *     security:
+ *       - bearerAuth: []
+ *
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - media
+ *             properties:
+ *               media:
+ *                 type: string
+ *                 format: binary
+ *                 description: Audio file
+ *
+ *     responses:
+ *       200:
+ *         description: Audio uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Audio uploaded successfully
+ *
+ *                 mediaUrl:
+ *                   type: string
+ *                   example: https://res.cloudinary.com/demo/video/upload/audio.mp3
+ *
+ *                 cloudinaryPublicId:
+ *                   type: string
+ *                   example: chat/audio/abc123
+ *
+ *                 mediaSize:
+ *                   type: number
+ *                   example: 300000
+ *
+ *                 audioDuration:
+ *                   type: number
+ *                   example: 18
+ *
+ *       400:
+ *         description: Invalid audio file
+ *
+ *       401:
+ *         description: Unauthorized
+ *
+ *       500:
+ *         description: Failed to upload audio
+ */
+router.post(
+    "/upload-audio",
+    authMiddleware,
+    upload.single("media"),
+    uploadAudio
 );
 module.exports = router;

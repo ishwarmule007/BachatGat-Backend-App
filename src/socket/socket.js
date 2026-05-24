@@ -53,175 +53,219 @@ const initializeSocket = (server) => {
     io.on("connection", (socket) => {
         console.log("User connected:", socket.user.fullName);
 
-        socket.on("joinGroup", async(data) => {
-            try {
-                const groupCode = data && data.groupCode;
-                const cleanGroupCode = String(groupCode || "").trim();
-
-                if (!cleanGroupCode) {
-                    return socket.emit("errorMessage", {
-                        message: "groupCode is required"
-                    });
-                }
-
-                const group = await Group.findOne({
-                    groupCode: cleanGroupCode
-                });
-
-                if (!group) {
-                    return socket.emit("errorMessage", {
-                        message: "Group not found"
-                    });
-                }
-
-                const isApprovedMember = group.members.some(
-                    (m) =>
-                    m.userId &&
-                    m.userId.toString() === socket.user._id.toString() &&
-                    m.status === "approved"
-                );
-
-                if (!isApprovedMember) {
-                    return socket.emit("errorMessage", {
-                        message: "You are not approved member of this group"
-                    });
-                }
-
-                socket.join(cleanGroupCode);
-
-                socket.emit("joinedGroup", {
-                    message: "Joined group chat successfully",
-                    groupCode: cleanGroupCode
-                });
-            } catch (error) {
-                socket.emit("errorMessage", {
-                    message: error.message
-                });
-            }
-        });
         const MAX_IMAGE_SIZE = 1 * 1024 * 1024;
+
         const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
 
+        const MAX_AUDIO_SIZE = 2 * 1024 * 1024;
+
         socket.on("sendMessage", async(data) => {
+
             try {
-                const groupCode = data && data.groupCode;
-                const message = data && data.message;
-                const messageType = data && data.messageType;
 
-                const mediaUrl = data && data.mediaUrl;
-                const thumbnailUrl = data && data.thumbnailUrl;
-                const cloudinaryPublicId = data && data.cloudinaryPublicId;
-                const mediaSize = data && data.mediaSize;
-                const mediaDuration = data && data.mediaDuration;
+                const groupCode =
+                    data && data.groupCode;
 
-                const cleanGroupCode = String(groupCode || "").trim();
+                const message =
+                    data && data.message;
+
+                const messageType =
+                    data && data.messageType;
+
+                const mediaUrl =
+                    data && data.mediaUrl;
+
+                const thumbnailUrl =
+                    data && data.thumbnailUrl;
+
+                const cloudinaryPublicId =
+                    data && data.cloudinaryPublicId;
+
+                const mediaSize =
+                    data && data.mediaSize;
+
+                const mediaDuration =
+                    data && data.mediaDuration;
+
+                const audioDuration =
+                    data && data.audioDuration;
+
+                const replyTo =
+                    data && data.replyTo;
+
+                const cleanGroupCode =
+                    String(groupCode || "").trim();
 
                 if (!cleanGroupCode) {
-                    return socket.emit("errorMessage", {
-                        message: "groupCode is required",
-                    });
+
+                    return socket.emit(
+                        "errorMessage", {
+                            message: "groupCode is required",
+                        }
+                    );
                 }
 
                 if (!message &&
                     !mediaUrl
                 ) {
-                    return socket.emit("errorMessage", {
-                        message: "message or mediaUrl is required",
-                    });
+
+                    return socket.emit(
+                        "errorMessage", {
+                            message: "message or mediaUrl is required",
+                        }
+                    );
                 }
 
+                // IMAGE LIMIT
                 if (
                     messageType === "image" &&
                     mediaSize > MAX_IMAGE_SIZE
                 ) {
-                    return socket.emit("errorMessage", {
-                        message: "Image size should be less than or equal to 1 MB",
-                    });
+
+                    return socket.emit(
+                        "errorMessage", {
+                            message: "Image size should be less than or equal to 1 MB",
+                        }
+                    );
                 }
 
+                // VIDEO LIMIT
                 if (
                     messageType === "video" &&
                     mediaSize > MAX_VIDEO_SIZE
                 ) {
-                    return socket.emit("errorMessage", {
-                        message: "Video size should be less than or equal to 10 MB",
-                    });
+
+                    return socket.emit(
+                        "errorMessage", {
+                            message: "Video size should be less than or equal to 10 MB",
+                        }
+                    );
                 }
 
-                const group = await Group.findOne({
-                    groupCode: cleanGroupCode,
-                });
+                // AUDIO LIMIT
+                if (
+                    messageType === "audio" &&
+                    mediaSize > MAX_AUDIO_SIZE
+                ) {
+
+                    return socket.emit(
+                        "errorMessage", {
+                            message: "Audio size should be less than or equal to 2 MB",
+                        }
+                    );
+                }
+
+                const group =
+                    await Group.findOne({
+                        groupCode: cleanGroupCode,
+                    });
 
                 if (!group) {
-                    return socket.emit("errorMessage", {
-                        message: "Group not found",
-                    });
+
+                    return socket.emit(
+                        "errorMessage", {
+                            message: "Group not found",
+                        }
+                    );
                 }
 
-                const isApprovedMember = group.members.some(
-                    (m) =>
-                    m.userId &&
-                    m.userId.toString() === socket.user._id.toString() &&
-                    m.status === "approved"
-                );
+                const isApprovedMember =
+                    group.members.some(
+                        (m) =>
+                        m.userId &&
+                        m.userId.toString() ===
+                        socket.user._id.toString() &&
+                        m.status === "approved"
+                    );
 
                 if (!isApprovedMember) {
-                    return socket.emit("errorMessage", {
-                        message: "You are not approved member of this group",
-                    });
+
+                    return socket.emit(
+                        "errorMessage", {
+                            message: "You are not approved member of this group",
+                        }
+                    );
                 }
 
+                // 7 DAYS MEDIA EXPIRY
                 const mediaExpireDate =
                     messageType === "image" ||
-                    messageType === "video" ?
+                    messageType === "video" ||
+                    messageType === "audio" ?
                     new Date(
                         Date.now() +
-                        7 * 24 * 60 * 60 * 1000
+                        7 *
+                        24 *
+                        60 *
+                        60 *
+                        1000
                     ) :
                     null;
 
-                const newMessage = await Message.create({
-                    groupId: group._id,
-                    senderId: socket.user._id,
+                const newMessage =
+                    await Message.create({
 
-                    messageType: messageType || "text",
+                        groupId: group._id,
 
-                    message: message || "",
+                        senderId: socket.user._id,
 
-                    mediaUrl: mediaUrl || "",
+                        messageType: messageType || "text",
 
-                    thumbnailUrl: thumbnailUrl || "",
+                        message: message || "",
 
-                    cloudinaryPublicId: cloudinaryPublicId || "",
+                        mediaUrl: mediaUrl || "",
 
-                    mediaSize: mediaSize || 0,
+                        thumbnailUrl: thumbnailUrl || "",
 
-                    mediaDuration: mediaDuration || 0,
+                        cloudinaryPublicId: cloudinaryPublicId || "",
 
-                    mediaExpiresAt: mediaExpireDate,
+                        mediaSize: mediaSize || 0,
 
-                    readBy: [{
-                        userId: socket.user._id,
-                    }, ],
-                });
+                        mediaDuration: mediaDuration || 0,
+
+                        audioDuration: audioDuration || 0,
+
+                        mediaExpiresAt: mediaExpireDate,
+
+                        replyTo: replyTo || null,
+
+                        readBy: [{
+                            userId: socket.user._id,
+                        }, ],
+                    });
 
                 const populatedMessage =
-                    await Message.findById(newMessage._id)
+                    await Message.findById(
+                        newMessage._id
+                    )
                     .populate(
                         "senderId",
                         "fullName mobileNumber roleSelection"
-                    );
+                    )
+                    .populate({
+                        path: "replyTo",
+                        populate: {
+                            path: "senderId",
+                            select: "fullName"
+                        }
+                    });
 
-                socket.join(cleanGroupCode);
+                socket.join(
+                    cleanGroupCode
+                );
 
                 io.to(cleanGroupCode).emit(
                     "receiveMessage",
                     populatedMessage
                 );
+
             } catch (error) {
-                socket.emit("errorMessage", {
-                    message: error.message,
-                });
+
+                socket.emit(
+                    "errorMessage", {
+                        message: error.message,
+                    }
+                );
             }
         });
 
