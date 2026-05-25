@@ -11,7 +11,7 @@ router.post("/upload-locations", async(req, res) => {
 
         const filePath = path.join(
             process.cwd(),
-            "src/data/locations.json"
+            "src/data/location.json"
         );
 
         const jsonData = fs.readFileSync(filePath, "utf-8");
