@@ -303,50 +303,94 @@ router.patch(
  *             properties:
  *               groupName:
  *                 type: string
- *                 example: "Shivaji Bachat Gat"
+ *                 example: "Shree Ganesh Bachat Gat"
+ *
  *               groupCode:
  *                 type: string
  *                 example: "SBG-001"
- *               groupDuration:
- *                 type: string
- *                 example: "12 Months"
+ *
  *               startDate:
  *                 type: string
  *                 format: date
- *                 example: "2026-05-19"
+ *                 example: "2026-05-25"
+ *
  *               description:
  *                 type: string
- *                 example: "Women self-help savings group"
+ *                 example: "Women self help savings group"
+ *
  *               village:
  *                 type: string
- *                 example: "Shiamgir"
+ *                 example: "Khed"
+ *
  *               taluka:
  *                 type: string
- *                 example: "Nashik"
+ *                 example: "Haveli"
+ *
  *               district:
  *                 type: string
- *                 example: "Nashik"
+ *                 example: "Pune"
+ *
  *               state:
  *                 type: string
  *                 example: "Maharashtra"
+ *
  *               formationDate:
  *                 type: string
  *                 format: date
- *                 example: "2026-05-19"
+ *                 example: "2026-05-01"
+ *
  *               groupDurationInYears:
  *                 type: number
- *                 example: 2
+ *                 example: 5
+ *
  *     responses:
  *       201:
  *         description: Group created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Group created successfully"
+ *
+ *                 groupId:
+ *                   type: string
+ *                   example: "6852ab12cd34ef5678901234"
+ *
+ *                 groupName:
+ *                   type: string
+ *                   example: "Shree Ganesh Bachat Gat"
+ *
+ *                 groupCode:
+ *                   type: string
+ *                   example: "SBG-001"
+ *
  *       400:
- *         description: Missing required fields or group already exists
+ *         description: Validation error or duplicate group
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Group code already exists"
+ *
  *       401:
- *         description: Unauthorized - Token missing or invalid
- *       403:
- *         description: Access denied - Admin only
+ *         description: Unauthorized
+ *
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
  */
 router.post(
     "/create-group",

@@ -206,7 +206,6 @@ const createGroup = async(req, res) => {
         const {
             groupName,
             groupCode,
-            groupDuration,
             startDate,
             description,
             village,
@@ -245,7 +244,6 @@ const createGroup = async(req, res) => {
         const newGroup = new Group({
             groupName,
             groupCode,
-            groupDuration,
             startDate,
             village,
             taluka,
