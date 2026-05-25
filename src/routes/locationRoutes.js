@@ -113,7 +113,7 @@ router.get("/taluka/:state/:district", async(req, res) => {
 
         res.status(200).json({
             success: true,
-            data: location ? .sub_districts || [],
+            data: location ? location.sub_District || [] : [],
         });
 
     } catch (error) {
