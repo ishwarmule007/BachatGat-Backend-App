@@ -886,7 +886,7 @@ router.delete(
 );
 /**
  * @swagger
- * /api/chat/groups/{groupCode}/members/{memberId}:
+ * /api/admin/groups/{groupCode}/members/{memberId}:
  *   delete:
  *     summary: Remove a member from group
  *     tags: [Admin]

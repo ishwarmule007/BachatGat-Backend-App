@@ -831,6 +831,7 @@ const editMemberByAdmin = async(req, res) => {
         }
 
         res.status(200).json({
+            success: true,
             message: "Member information updated successfully",
             member: updatedMember
         });
