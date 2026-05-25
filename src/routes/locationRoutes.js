@@ -29,7 +29,7 @@ router.post("/upload-locations", async(req, res) => {
                 bulkData.push({
                     state,
                     district,
-                    subDistrict: sub,
+                    sub_District: sub,
                 });
 
             });
@@ -107,7 +107,7 @@ router.get("/taluka", async(req, res) => {
         const { state, district } = req.query;
 
         const subdistricts = await Location.distinct(
-            "subDistrict", {
+            "sub_District", {
                 state,
                 district,
             }
