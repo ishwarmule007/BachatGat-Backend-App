@@ -33,6 +33,10 @@ const groupSchema = new mongoose.Schema({
             type: Number
         }
     },
+    durationOfGroup: {
+        type: Number,
+        default: 0
+    },
     adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     members: [{
         userId: {
@@ -66,10 +70,6 @@ const groupSchema = new mongoose.Schema({
         joinedAt: {
             type: Date,
             default: Date.now
-        },
-        durationOfGroup: {
-            type: Number,
-            default: 0
         }
     }]
 }, { timestamps: true });
