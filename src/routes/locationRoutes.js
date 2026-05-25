@@ -101,21 +101,19 @@ router.get("/districts/:state", async(req, res) => {
 });
 
 
-router.get("/taluka", async(req, res) => {
+router.get("/taluka/:state/:district", async(req, res) => {
     try {
 
-        const { state, district } = req.query;
+        const { state, district } = req.params;
 
-        const subdistricts = await Location.distinct(
-            "sub_District", {
-                state,
-                district,
-            }
-        );
+        const location = await Location.findOne({
+            state,
+            district,
+        });
 
         res.status(200).json({
             success: true,
-            data: subdistricts,
+            data: location ? .sub_districts || [],
         });
 
     } catch (error) {
@@ -127,5 +125,4 @@ router.get("/taluka", async(req, res) => {
 
     }
 });
-
 module.exports = router;
