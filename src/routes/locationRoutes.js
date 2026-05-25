@@ -100,20 +100,21 @@ router.get("/districts/:state", async(req, res) => {
     }
 });
 
-
 router.get("/taluka/:state/:district", async(req, res) => {
     try {
 
         const { state, district } = req.params;
 
-        const location = await Location.findOne({
-            state: { $regex: new RegExp(`^${state}$`, "i") },
-            district: { $regex: new RegExp(`^${district}$`, "i") },
-        });
+        const talukas = await Location.distinct(
+            "sub_district", {
+                state: { $regex: new RegExp(`^${state}$`, "i") },
+                district: { $regex: new RegExp(`^${district}$`, "i") },
+            }
+        );
 
         res.status(200).json({
             success: true,
-            data: location ? location.sub_district || [] : [],
+            data: talukas,
         });
 
     } catch (error) {
