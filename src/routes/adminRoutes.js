@@ -840,6 +840,87 @@ router.delete(
     adminMiddleware,
     deleteGroupByAdmin
 );
+/**
+ * @swagger
+ * /api/chat/groups/{groupCode}/members/{memberId}:
+ *   delete:
+ *     summary: Remove a member from group
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: groupCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "Atharv-011"
+ *         description: Unique group code
+ *
+ *       - in: path
+ *         name: memberId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "6852b8f1f12c8a45a1234567"
+ *         description: User ID of member to remove
+ *
+ *     responses:
+ *       200:
+ *         description: Member removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Member removed successfully"
+ *
+ *       400:
+ *         description: Invalid request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "memberId is required"
+ *
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *
+ *       403:
+ *         description: Only admin can remove members
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Only admin can remove members"
+ *
+ *       404:
+ *         description: Group or member not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Group not found"
+ */
 router.delete(
     "/groups/:groupCode/members/:memberId",
     authMiddleware,
