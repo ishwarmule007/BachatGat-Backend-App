@@ -5,7 +5,36 @@ const path = require("path");
 const Location = require("../models/location");
 
 const router = express.Router();
-
+/**
+ * @swagger
+ * /api/locations/upload-locations:
+ *   post:
+ *     summary: Upload location master data into database
+ *     description: |
+ *       This API uploads all states, districts and talukas from the local JSON file into MongoDB.
+ *       
+ *        Important:
+ *       - Use this API only one time for initial database seeding.
+ *       - Do not call this API repeatedly, otherwise duplicate records may get inserted.
+ *       - Recommended only for development/setup purposes.
+ *     tags: [Location]
+ *     responses:
+ *       200:
+ *         description: Locations uploaded successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               message: Locations uploaded successfully
+ *               totalInserted: 4664
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: false
+ *               message: Error message
+ */
 router.post("/upload-locations", async(req, res) => {
     try {
 
@@ -55,7 +84,28 @@ router.post("/upload-locations", async(req, res) => {
 
     }
 });
-
+/**
+ * @swagger
+ * /api/locations/states:
+ *   get:
+ *     summary: Get all states and union territories
+ *     description: Returns list of all distinct states and union territories available in database.
+ *     tags: [Location]
+ *     responses:
+ *       200:
+ *         description: List of states fetched successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               data:
+ *                 - Madhya Pradesh
+ *                 - Maharashtra
+ *                 - Gujarat
+ *                 - Rajasthan
+ *       500:
+ *         description: Internal server error
+ */
 router.get("/states", async(req, res) => {
     try {
 
@@ -75,7 +125,34 @@ router.get("/states", async(req, res) => {
 
     }
 });
-
+/**
+ * @swagger
+ * /api/locations/districts/{state}:
+ *   get:
+ *     summary: Get all districts of a state
+ *     description: Returns all districts for the provided state.
+ *     tags: [Location]
+ *     parameters:
+ *       - in: path
+ *         name: state
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: Madhya Pradesh
+ *     responses:
+ *       200:
+ *         description: Districts fetched successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               data:
+ *                 - Indore
+ *                 - Bhopal
+ *                 - Khargone
+ *       500:
+ *         description: Internal server error
+ */
 router.get("/districts/:state", async(req, res) => {
     try {
 
@@ -99,7 +176,42 @@ router.get("/districts/:state", async(req, res) => {
 
     }
 });
-
+/**
+ * @swagger
+ * /api/locations/taluka/{state}/{district}:
+ *   get:
+ *     summary: Get all talukas of a district
+ *     description: Returns all talukas/sub-districts for the provided state and district.
+ *     tags: [Location]
+ *     parameters:
+ *       - in: path
+ *         name: state
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: Madhya Pradesh
+ *       - in: path
+ *         name: district
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: Khargone
+ *     responses:
+ *       200:
+ *         description: Talukas fetched successfully
+ *         content:
+ *           application/json:
+ *             example:
+ *               success: true
+ *               data:
+ *                 - Barwaha
+ *                 - Bhagwanpura
+ *                 - Bhikangaon
+ *                 - Kasrawad
+ *                 - Maheshwar
+ *       500:
+ *         description: Internal server error
+ */
 router.get("/taluka/:state/:district", async(req, res) => {
     try {
         const { state, district } = req.params;
