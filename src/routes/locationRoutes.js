@@ -29,7 +29,7 @@ router.post("/upload-locations", async(req, res) => {
                 bulkData.push({
                     state,
                     district,
-                    sub_District: sub,
+                    sub_district: sub,
                 });
 
             });
@@ -113,7 +113,7 @@ router.get("/taluka/:state/:district", async(req, res) => {
 
         res.status(200).json({
             success: true,
-            data: location ? location.sub_District || [] : [],
+            data: location ? location.sub_district || [] : [],
         });
 
     } catch (error) {
