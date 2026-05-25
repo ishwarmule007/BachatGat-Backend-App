@@ -657,7 +657,10 @@ const removeMemberFromGroup = async(req, res) => {
 
         const durationInYears = group.durationOfGroup;
 
-        if (!durationInYears) {
+        if (
+            durationInYears === undefined ||
+            durationInYears === null
+        ) {
             return res.status(400).json({
                 message: "Group duration is not set for this group",
             });
