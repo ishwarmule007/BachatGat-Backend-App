@@ -840,4 +840,11 @@ router.delete(
     adminMiddleware,
     deleteGroupByAdmin
 );
+router.delete(
+    "/groups/:groupCode/members/:memberId",
+    authMiddleware,
+    adminMiddleware,
+    removeMemberFromGroup
+);
+
 module.exports = router;
