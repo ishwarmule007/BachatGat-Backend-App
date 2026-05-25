@@ -787,7 +787,7 @@ const editMemberByAdmin = async(req, res) => {
         const {
             fullName,
             mobileNumber,
-            dateofBirth,
+            dateOfBirth,
             address
         } = req.body;
 
@@ -807,7 +807,7 @@ const editMemberByAdmin = async(req, res) => {
 
         if (fullName !== undefined) updateData.fullName = fullName;
         if (mobileNumber !== undefined) updateData.mobileNumber = mobileNumber;
-        if (dateofBirth !== undefined) updateData.dateofBirth = dateofBirth;
+        if (dateOfBirth !== undefined) updateData.dateOfBirth = dateOfBirth;
         if (address !== undefined) updateData.address = address;
 
         if (Object.keys(updateData).length === 0) {
@@ -822,7 +822,7 @@ const editMemberByAdmin = async(req, res) => {
                 new: true,
                 runValidators: true
             }
-        ).select("fullName mobileNumber dateofBirth address profilePicture roleSelection");
+        ).select("fullName mobileNumber dateOfBirth address profilePicture roleSelection");
 
         if (!updatedMember) {
             return res.status(404).json({
