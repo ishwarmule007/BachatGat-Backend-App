@@ -644,10 +644,10 @@ const getAdminPaymentDashboard = async(req, res) => {
 const removeMemberFromGroup = async(req, res) => {
     try {
         const adminId = req.user._id;
-        const { groupId, memberId } = req.params;
+        const { groupCode, memberId } = req.params;
 
         const group = await Group.findOne({
-            _id: groupId,
+            groupCode,
             adminId,
         });
 
@@ -688,7 +688,7 @@ const removeMemberFromGroup = async(req, res) => {
         }
 
         const activeLoan = await Loan.findOne({
-            groupId,
+            groupId: group._id,
             userId: memberId,
             $or: [{
                     status: "pending",
