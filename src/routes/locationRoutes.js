@@ -107,8 +107,8 @@ router.get("/taluka/:state/:district", async(req, res) => {
         const { state, district } = req.params;
 
         const location = await Location.findOne({
-            state,
-            district,
+            state: { $regex: new RegExp(`^${state}$`, "i") },
+            district: { $regex: new RegExp(`^${district}$`, "i") },
         });
 
         res.status(200).json({
