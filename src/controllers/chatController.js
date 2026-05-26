@@ -123,68 +123,54 @@ const uploadChatMedia = async(req, res) => {
 
         const file = req.file;
 
-        const isImage =
-            file.mimetype.startsWith("image");
+        const isImage = file.mimetype.startsWith("image/");
+        const isVideo = file.mimetype.startsWith("video/");
+        const isAudio = file.mimetype.startsWith("audio/");
 
-        const isVideo =
-            file.mimetype.startsWith("video");
-        const isAudio =
-            file.mimetype.startsWith("audio");
         if (!isImage && !isVideo && !isAudio) {
             return res.status(400).json({
                 message: "Only image, video, and audio files are allowed",
             });
         }
 
-        if (
-            isImage &&
-            file.size > 1 * 1024 * 1024
-        ) {
+        if (isImage && file.size > 1 * 1024 * 1024) {
             return res.status(400).json({
                 message: "Image size should be less than or equal to 1 MB",
             });
         }
-
-        if (
-            isVideo &&
-            file.size > 10 * 1024 * 1024
-        ) {
+        if (isVideo && file.size > 10 * 1024 * 1024) {
             return res.status(400).json({
                 message: "Video size should be less than or equal to 10 MB",
             });
         }
-        if (
-            isAudio &&
-            file.size > 2 * 1024 * 1024
-        ) {
+        if (isAudio && file.size > 2 * 1024 * 1024) {
             return res.status(400).json({
                 message: "Audio size should be less than or equal to 2 MB",
             });
         }
-        const uploadResult =
-            await new Promise((resolve, reject) => {
-                const uploadStream =
-                    cloudinary.uploader.upload_stream({
-                            folder: "chat-media",
 
-                            resource_type: isVideo || isAudio ?
-                                "video" : "image",
-                        },
-                        (error, result) => {
-                            if (error) {
-                                return reject(error);
-                            }
+        const uploadResult = await new Promise((resolve, reject) => {
 
-                            resolve(result);
-                        }
-                    );
+            const uploadStream = cloudinary.uploader.upload_stream({
+                    folder: "chat-media",
+                    resource_type: isImage ? "image" : "video",
+                },
+                (error, result) => {
 
-                streamifier
-                    .createReadStream(file.buffer)
-                    .pipe(uploadStream);
-            });
+                    if (error) {
+                        return reject(error);
+                    }
+                    resolve(result);
+                }
+            );
+
+            streamifier
+                .createReadStream(file.buffer)
+                .pipe(uploadStream);
+        });
 
         return res.status(200).json({
+            success: true,
             message: "Media uploaded successfully",
 
             mediaUrl: uploadResult.secure_url,
@@ -193,14 +179,16 @@ const uploadChatMedia = async(req, res) => {
 
             mediaSize: file.size,
 
-            messageType: isImage ?
+            mediaType: isImage ?
                 "image" : isVideo ?
                 "video" : "audio",
         });
-    } catch (error) {
-        return res.status(500).json({
-            message: "Failed to upload media",
 
+    } catch (error) {
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to upload media",
             error: error.message,
         });
     }
