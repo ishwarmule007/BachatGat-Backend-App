@@ -125,6 +125,8 @@ const acceptGroupRequest = async(req, res) => {
         member.joinedAt = new Date();
 
         await group.save();
+        const user = await User.findById(userId);
+
         const approvedMembers = group.members.filter(
             member => member.status === "approved"
         );
@@ -138,11 +140,13 @@ const acceptGroupRequest = async(req, res) => {
         }));
 
         await createManyNotifications(notifications);
+
         res.status(200).json({
             message: "Group request accepted successfully",
             groupCode,
             status: "approved"
         });
+
     } catch (error) {
         res.status(500).json({
             message: "Failed to accept group request",
@@ -405,11 +409,66 @@ const getMemberProfile = async(req, res) => {
         });
     }
 };
+const leaveGroup = async(req, res) => {
+    try {
+        const userId = req.user._id;
+        const { groupId } = req.params;
+
+        const group = await Group.findOne({
+            _id: groupId,
+            members: {
+                $elemMatch: {
+                    userId,
+                    status: "approved"
+                }
+            }
+        });
+
+        if (!group) {
+            return res.status(404).json({
+                message: "Group not found"
+            });
+        }
+        const existingLoanApplication = await LoanApplication.findOne({
+            groupId,
+            userId,
+            status: {
+                $in: [
+                    "pending",
+                    "approved",
+                    "active"
+                ]
+            }
+        });
+
+        if (existingLoanApplication) {
+            return res.status(400).json({
+                message: "You cannot leave the group while having an active loan application"
+            });
+        }
+        group.members = group.members.filter(
+            (member) =>
+            member.userId.toString() !== userId.toString()
+        );
+
+        await group.save();
+
+        return res.status(200).json({
+            message: "Left group successfully"
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            message: error.message
+        });
+    }
+};
 module.exports = {
     getMemberGroupRequests,
     acceptGroupRequest,
     rejectGroupRequest,
     getMemberHomeDashboard,
     getMemberProfile,
-    getRejectedPaymentDetail
+    getRejectedPaymentDetail,
+    leaveGroup
 };
