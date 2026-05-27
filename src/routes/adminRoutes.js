@@ -90,6 +90,14 @@ router.post(
  *                     fullName:
  *                       type: string
  *                       example: "Atharv Saraf"
+ *                     address:
+ *                      type: string
+ *                      example: "Pune, Maharashtra"
+ * 
+ *                     dateOfBirth:
+ *                       type: string
+ *                       format: date
+ *                       example: "2002-05-15"
  *                     mobileNumber:
  *                       type: string
  *                       example: "9876543210"
