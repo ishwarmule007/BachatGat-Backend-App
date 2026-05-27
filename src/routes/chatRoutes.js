@@ -1,6 +1,7 @@
 const express = require("express");
 const upload = require("../middlewares/uploadMiddleware");
 const cloudinary = require("../config/cloudinary");
+const multer = require("multer");
 const streamifier = require("streamifier");
 const authMiddleware = require("../middlewares/authMiddleware");
 const {
@@ -437,8 +438,23 @@ router.delete(
 router.post(
     "/upload-media",
     authMiddleware,
-    upload.single("media"),
-    uploadChatMedia
+    (req, res, next) => {
+        upload.single("media")(req, res, (err) => {
+            if (err instanceof multer.MulterError) {
+                if (err.code === "LIMIT_FILE_SIZE") {
+                    return res.status(400).json({
+                        success: false,
+                        message: "File size exceeds the maximum limit of 10 MB.",
+                    });
+                }
+                return res.status(400).json({ success: false, message: err.message });
+            } else if (err) {
+                return res.status(500).json({ success: false, message: "An unknown error occurred." });
+            }
+            next();
+        });
+    },
+    uploadChatMedia // Your controller file
 );
 
 module.exports = router;
