@@ -382,38 +382,39 @@ const addMember = async(req, res) => {
 const getAdminProfile = async(req, res) => {
     try {
         const adminId = req.user._id;
-        const admin = await User.findById(adminId).select(
-            "fullName mobileNumber roleSelection profilePicture upiId bankAccountDetails"
-        );
+        const groupIds = await Group.find({ adminId }).distinct("_id");
+        const [admin, groups, totalCollectionData] = await Promise.all([
+            User.findById(adminId).select(
+                "fullName mobileNumber roleSelection profilePicture upiId bankAccountDetails address dateOfBirth"
+            ),
+            Group.find({ _id: { $in: groupIds } }).select("members"),
+
+            Contribution.aggregate([{
+                    $match: {
+                        groupId: { $in: groupIds },
+                        status: "paid",
+                    },
+                },
+                {
+                    $group: {
+                        _id: null,
+                        total: { $sum: "$amount" },
+                    },
+                },
+            ]),
+        ]);
+
         if (!admin) {
             return res.status(404).json({
                 success: false,
                 message: "Admin not found",
             });
         }
-        const groups = await Group.find({
-            adminId,
-        });
-        const groupIds = groups.map(
-            (group) => group._id
-        );
-        let totalMembers = 0;
-        groups.forEach((group) => {
-            totalMembers +=
-                group.members ? group.members.length || 0 : 0;
-        });
-        const contributions =
-            await Contribution.find({
-                groupId: {
-                    $in: groupIds,
-                },
-                status: "paid",
-            });
-        let totalCollection = 0;
-        contributions.forEach((contribution) => {
-            totalCollection += contribution.amount;
-        });
-        res.status(200).json({
+
+        const totalMembers = groups.reduce((acc, group) => acc + (group.members ? group.members.length || 0 : 0), 0);
+        const totalCollection = totalCollectionData[0] ? totalCollectionData[0].total || 0 : 0;
+
+        return res.status(200).json({
             success: true,
             adminProfile: {
                 fullName: admin.fullName,
@@ -427,11 +428,13 @@ const getAdminProfile = async(req, res) => {
                     totalMembers,
                     totalCollection,
                 },
+                address: admin.address || null,
+                dateOfBirth: admin.dateOfBirth || null,
             },
         });
 
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: error.message,
         });
@@ -899,6 +902,10 @@ module.exports = {
     getAdminMemberProfile,
     getAdminPaymentDashboard,
     updateUpiId,
+    removeMemberFromGroup,
+    getGroupsWithMembers,
+    editMemberByAdmin,
+    deleteGroupByAdmin,
     removeMemberFromGroup,
     getGroupsWithMembers,
     editMemberByAdmin,
