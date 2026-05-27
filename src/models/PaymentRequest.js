@@ -50,6 +50,14 @@ const paymentRequestSchema = new mongoose.Schema({
     rejectionReason: {
         type: String
     },
+    resubmittedAt: {
+        type: Date
+    },
+
+    resubmissionCount: {
+        type: Number,
+        default: 0
+    },
     additionalComments: {
         type: String,
         default: ""

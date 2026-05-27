@@ -9,7 +9,9 @@ const {
     getMemberPaymentHistory,
     getAdminPaymentRequests,
     getPaymentRequestDetail,
-    generateContributionPaymentLink
+    generateContributionPaymentLink,
+    resubmitPaymentRequest,
+    getRejectedPaymentRequestDetails
 } = require("../controllers/paymentController");
 const {
     createPaymentRequest
@@ -517,5 +519,15 @@ router.patch(
     adminMiddleware,
     updatePaymentRequestStatus
 );
-
+router.post(
+    "/resubmit/:paymentRequestId",
+    authMiddleware,
+    upload.single("screenshot"),
+    resubmitPaymentRequest
+);
+router.get(
+    "/rejected/:paymentRequestId",
+    authMiddleware,
+    getRejectedPaymentRequestDetails
+);
 module.exports = router;

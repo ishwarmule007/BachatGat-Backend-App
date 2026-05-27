@@ -296,6 +296,7 @@ exports.getPaymentRequestDetail = async (req, res) => {
     });
   }
 };
+
 exports.generateContributionPaymentLink = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -389,5 +390,157 @@ exports.generateContributionPaymentLink = async (req, res) => {
     res.status(500).json({
       message: error.message,
     });
+    }
+};
+
+exports.resubmitPaymentRequest = async (req, res) => {
+    try {
+
+        const { paymentRequestId } = req.params;
+
+        const { additionalComments } = req.body;
+
+        const screenshotUrl = req.file?.path;
+
+        if (!screenshotUrl) {
+            return res.status(400).json({
+                message: "Screenshot is required"
+            });
+        }
+
+        const paymentRequest = await PaymentRequest.findById(paymentRequestId);
+
+        if (!paymentRequest) {
+            return res.status(404).json({
+                message: "Payment request not found"
+            });
+        }
+
+        if (paymentRequest.userId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                message: "Unauthorized"
+            });
+        }
+
+        if (paymentRequest.status !== "rejected") {
+            return res.status(400).json({
+                message: "Only rejected payment requests can be resubmitted"
+            });
+        }
+
+        paymentRequest.screenshotUrl = screenshotUrl;
+
+        paymentRequest.additionalComments =
+            additionalComments || "";
+
+        paymentRequest.status = "pending";
+
+        paymentRequest.rejectionReason = null;
+
+        paymentRequest.rejectedAt = null;
+
+        paymentRequest.resubmittedAt = new Date();
+
+        paymentRequest.resubmissionCount += 1;
+
+        await paymentRequest.save();
+
+        await createNotification({
+            userId: paymentRequest.adminId,
+            groupId: paymentRequest.groupId,
+            title: "Payment Resubmitted",
+            message: `A new payment screenshot has been uploaded for ${paymentRequest.month}`,
+            type: "payment_resubmitted"
+        });
+
+        res.status(200).json({
+            message: "Payment resubmitted successfully",
+            paymentRequest
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: error.message
+        });
+    }
+};
+exports.getRejectedPaymentRequestDetails = async (req, res) => {
+    try {
+
+        const { paymentRequestId } = req.params;
+
+        const paymentRequest = await PaymentRequest.findById(paymentRequestId)
+            .populate("adminId", "fullName")
+            .populate("groupId", "groupName groupCode")
+            .populate("userId", "fullName");
+
+        if (!paymentRequest) {
+            return res.status(404).json({
+                message: "Payment request not found"
+            });
+        }
+
+        // only owner can view
+        if (
+            paymentRequest.userId._id.toString() !==
+            req.user._id.toString()
+        ) {
+            return res.status(403).json({
+                message: "Unauthorized"
+            });
+        }
+
+        res.status(200).json({
+            message: "Payment request fetched successfully",
+
+            paymentRequest: {
+
+                paymentRequestId: paymentRequest._id,
+
+                status: paymentRequest.status,
+
+                amount: paymentRequest.amount,
+
+                month: paymentRequest.month,
+
+                screenshotUrl: paymentRequest.screenshotUrl,
+
+                submittedAt: paymentRequest.createdAt,
+
+                rejectedAt: paymentRequest.rejectedAt,
+
+                acceptedAt: paymentRequest.acceptedAt,
+
+                rejectionReason:
+                    paymentRequest.rejectionReason,
+
+                additionalComments:
+                    paymentRequest.additionalComments,
+
+                resubmittedAt:
+                    paymentRequest.resubmittedAt,
+
+                resubmissionCount:
+                    paymentRequest.resubmissionCount,
+
+                group: {
+                    groupId: paymentRequest.groupId._id,
+                    groupName: paymentRequest.groupId.groupName,
+                    groupCode: paymentRequest.groupId.groupCode,
+                },
+
+                admin: {
+                    adminId: paymentRequest.adminId._id,
+                    fullName: paymentRequest.adminId.fullName,
+                }
+            }
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: error.message
+        });
+
     }
 };
