@@ -5,7 +5,8 @@ const {
     acceptGroupRequest,
     rejectGroupRequest,
     getMemberHomeDashboard,
-    getMemberProfile
+    getMemberProfile,
+    leaveGroup
 } = require("../controllers/memberController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -320,7 +321,36 @@ router.post(
     authMiddleware,
     rejectGroupRequest
 );
-
-
-
+/**
+ * @swagger
+ * /api/members/leave-group:
+ *   post:
+ *     summary: Leave a group
+ *     tags: [Member]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: groupId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "64f1b2c3d4e5f6789012345"
+ *     responses:
+ *       200:
+ *         description: Successfully left the group
+ *       400:
+ *         description: Cannot leave group due to existing loan application (pending, approved, or active)
+ *       401:
+ *         description: Unauthorized - Token missing or invalid
+ *       404:
+ *         description: Group not found or user not a member
+ *       500:
+ *         description: Failed to leave group
+ */
+router.post(
+    "/leave-group",
+    authMiddleware,
+    leaveGroup
+);
 module.exports = router;
