@@ -52,7 +52,6 @@ const initializeSocket = (server) => {
 
     io.on("connection", (socket) => {
         console.log("User connected:", socket.user.fullName);
-        // JOIN GROUP
         socket.on("joinGroup", async(data) => {
             try {
 
@@ -271,43 +270,25 @@ const initializeSocket = (server) => {
                             }
                         );
                     }
-                    if (
-                        replyTo &&
-                        !mongoose.Types.ObjectId.isValid(
-                            replyTo
-                        )
-                    ) {
-
-                        return socket.emit(
-                            "errorMessage", {
-                                message: "Invalid reply message id",
-                            }
-                        );
-                    }
                     let repliedMessage = null;
 
                     if (replyTo) {
 
-                        repliedMessage = await Message.findById(replyTo);
+                        if (!mongoose.Types.ObjectId.isValid(replyTo)) {
+                            return socket.emit("errorMessage", {
+                                message: "Invalid reply message id"
+                            });
+                        }
+
+                        repliedMessage = await Message.findOne({
+                            _id: replyTo,
+                            groupId: group._id,
+                            isDeleted: false
+                        });
 
                         if (!repliedMessage) {
                             return socket.emit("errorMessage", {
-                                message: "Reply message not found"
-                            });
-                        }
-
-                        if (
-                            repliedMessage.groupId.toString() !==
-                            group._id.toString()
-                        ) {
-                            return socket.emit("errorMessage", {
-                                message: "Reply message does not belong to this group"
-                            });
-                        }
-
-                        if (repliedMessage.isDeleted) {
-                            return socket.emit("errorMessage", {
-                                message: "Cannot reply to deleted message"
+                                message: "Reply message not found in this group"
                             });
                         }
                     }
@@ -375,20 +356,15 @@ const initializeSocket = (server) => {
                     const populatedMessage =
                         await Message.findById(
                             newMessage._id
-                        )
-                        .populate(
-                            "senderId",
-                            "fullName mobileNumber roleSelection"
-                        )
+                        ).populate("senderId", "fullName mobileNumber roleSelection")
                         .populate({
                             path: "replyTo",
+                            select: "message messageType senderId createdAt",
                             populate: {
                                 path: "senderId",
-                                select: "fullName",
-                            },
-                        });
-
-                    // SEND MESSAGE
+                                select: "fullName mobileNumber roleSelection"
+                            }
+                        })
                     io.to(
                         cleanGroupCode
                     ).emit(
