@@ -13,7 +13,7 @@ const router = express.Router();
  * @swagger
  * /api/chat/groups/{groupCode}/messages:
  *   get:
- *     summary: Get all messages of a group chat
+ *     summary: Get all messages of a group chat (respects clear chat + approval check)
  *     tags: [Chat]
  *     security:
  *       - bearerAuth: []
@@ -24,6 +24,7 @@ const router = express.Router();
  *         schema:
  *           type: string
  *         example: "SBG-001"
+ *
  *     responses:
  *       200:
  *         description: Messages fetched successfully
@@ -35,6 +36,21 @@ const router = express.Router();
  *                 message:
  *                   type: string
  *                   example: "Messages fetched successfully"
+ *
+ *                 groupCode:
+ *                   type: string
+ *                   example: "SBG-001"
+ *
+ *                 clearedAt:
+ *                   type: string
+ *                   format: date-time
+ *                   nullable: true
+ *                   example: "2026-05-26T10:20:30.000Z"
+ *
+ *                 totalMessages:
+ *                   type: integer
+ *                   example: 25
+ *
  *                 messages:
  *                   type: array
  *                   items:
@@ -43,9 +59,11 @@ const router = express.Router();
  *                       _id:
  *                         type: string
  *                         example: "665c1f9a2b7d8f1234567890"
+ *
  *                       groupId:
  *                         type: string
  *                         example: "665c1f9a2b7d8f1234567891"
+ *
  *                       senderId:
  *                         type: object
  *                         properties:
@@ -61,24 +79,85 @@ const router = express.Router();
  *                           roleSelection:
  *                             type: string
  *                             example: "admin"
+ *
  *                       messageType:
  *                         type: string
  *                         example: "text"
+ *
  *                       message:
  *                         type: string
  *                         example: "Hello everyone"
+ *
  *                       isPinned:
  *                         type: boolean
  *                         example: false
+ *
  *                       isDeleted:
  *                         type: boolean
  *                         example: false
+ *
  *                       createdAt:
  *                         type: string
  *                         format: date-time
+ *
  *                       updatedAt:
  *                         type: string
  *                         format: date-time
+ *
+ *                       replyTo:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           messageId:
+ *                             type: string
+ *                             example: "665c1f9a2b7d8f1234567000"
+ *                           message:
+ *                             type: string
+ *                             example: "Previous message"
+ *                           messageType:
+ *                             type: string
+ *                             example: "text"
+ *                           sender:
+ *                             type: object
+ *                             nullable: true
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                                 example: "665c1f9a2b7d8f1234567892"
+ *                               fullName:
+ *                                 type: string
+ *                                 example: "Atharv Saraf"
+ *
+ *                       reactions:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             userId:
+ *                               type: object
+ *                               properties:
+ *                                 _id:
+ *                                   type: string
+ *                                 fullName:
+ *                                   type: string
+ *
+ *                       starredBy:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             userId:
+ *                               type: object
+ *                               properties:
+ *                                 _id:
+ *                                   type: string
+ *                                 fullName:
+ *                                   type: string
+ *
+ *                       isStarredByMe:
+ *                         type: boolean
+ *                         example: true
+ *
  *       401:
  *         description: Unauthorized - Token missing or invalid
  *       403:
