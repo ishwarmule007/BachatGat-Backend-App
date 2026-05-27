@@ -100,7 +100,7 @@ router.get(
  *     summary: Socket.IO chat events documentation
  *     description: |
  *       This route is only for Socket.IO event documentation.
- *       Frontend should not call this API in actual chat flow.
+ *       Frontend should NOT call this API in actual chat flow.
  *
  *       -----------------------------------
  *       SOCKET EMIT EVENTS
@@ -116,12 +116,22 @@ router.get(
  *
  *       2. sendMessage
  *
+ *       Allowed message types:
+ *       - text
+ *       - image
+ *       - video
+ *       - audio
+ *
+ *       message OR mediaUrl is required
+ *
+ *       -----------------------------------
+ *
  *       2.1 Normal Text Message
  *
  *       socket.emit("sendMessage", {
  *         groupCode,
  *         message,
- *         messageType
+ *         messageType: "text"
  *       });
  *
  *       Example:
@@ -143,7 +153,7 @@ router.get(
  *         replyTo
  *       });
  *
- *       replyTo = old messageId
+ *       replyTo = MongoDB ObjectId of existing message in SAME group
  *
  *       -----------------------------------
  *
@@ -151,25 +161,15 @@ router.get(
  *
  *       socket.emit("sendMessage", {
  *         groupCode,
- *         messageType,
+ *         message,
+ *         messageType: "image",
  *         mediaUrl,
  *         cloudinaryPublicId,
  *         mediaSize
  *       });
  *
- *       Example:
- *
- *       {
- *         "groupCode": "SBG-001",
- *         "messageType": "image",
- *         "mediaUrl": "https://cloudinary-url",
- *         "cloudinaryPublicId": "chat/images/abc123",
- *         "mediaSize": 500000
- *       }
- *
  *       Image max size = 1 MB
- *
- *       Images expire after 7 days.
+ *       Expiry = 7 days
  *
  *       -----------------------------------
  *
@@ -177,7 +177,8 @@ router.get(
  *
  *       socket.emit("sendMessage", {
  *         groupCode,
- *         messageType,
+ *         message,
+ *         messageType: "video",
  *         mediaUrl,
  *         thumbnailUrl,
  *         cloudinaryPublicId,
@@ -185,135 +186,64 @@ router.get(
  *         mediaDuration
  *       });
  *
- *       Example:
- *
- *       {
- *         "groupCode": "SBG-001",
- *         "messageType": "video",
- *         "mediaUrl": "https://cloudinary-video-url",
- *         "thumbnailUrl": "https://thumbnail-url",
- *         "cloudinaryPublicId": "chat/videos/abc123",
- *         "mediaSize": 5000000,
- *         "mediaDuration": 25
- *       }
- *
  *       Video max size = 10 MB
- *
- *       Videos expire after 7 days.
+ *       Expiry = 7 days
  *
  *       -----------------------------------
  *
- *       2.5 Voice Note / Audio Message
+ *       2.5 Audio Message
  *
  *       socket.emit("sendMessage", {
  *         groupCode,
- *         messageType,
+ *         message,
+ *         messageType: "audio",
  *         mediaUrl,
  *         cloudinaryPublicId,
  *         mediaSize,
  *         audioDuration
  *       });
  *
- *       Example:
- *
- *       {
- *         "groupCode": "SBG-001",
- *         "messageType": "audio",
- *         "mediaUrl": "https://cloudinary-audio-url",
- *         "cloudinaryPublicId": "chat/audio/abc123",
- *         "mediaSize": 300000,
- *         "audioDuration": 18
- *       }
- *
  *       Audio max size = 2 MB
- *
- *       Audio expires after 7 days.
- *
- *       Audio should be uploaded in Cloudinary using:
- *
- *       resource_type = "video"
+ *       Expiry = 7 days
  *
  *       -----------------------------------
  *
  *       3. deleteMessage
- *
- *       socket.emit("deleteMessage", {
- *         messageId
- *       });
- *
- *       -----------------------------------
+ *       socket.emit("deleteMessage", { messageId });
  *
  *       4. pinMessage
- *
- *       socket.emit("pinMessage", {
- *         messageId
- *       });
- *
- *       -----------------------------------
+ *       socket.emit("pinMessage", { messageId });
  *
  *       5. unpinMessage
- *
- *       socket.emit("unpinMessage", {
- *         messageId
- *       });
- *
- *       -----------------------------------
+ *       socket.emit("unpinMessage", { messageId });
  *
  *       6. reactMessage
- *
- *       socket.emit("reactMessage", {
- *         messageId,
- *         emoji
- *       });
- *
- *       -----------------------------------
+ *       socket.emit("reactMessage", { messageId, emoji });
  *
  *       7. removeReaction
- *
- *       socket.emit("removeReaction", {
- *         messageId
- *       });
- *
- *       -----------------------------------
+ *       socket.emit("removeReaction", { messageId });
  *
  *       8. starMessage
- *
- *       socket.emit("starMessage", {
- *         messageId
- *       });
- *
- *       -----------------------------------
+ *       socket.emit("starMessage", { messageId });
  *
  *       9. unstarMessage
- *
- *       socket.emit("unstarMessage", {
- *         messageId
- *       });
+ *       socket.emit("unstarMessage", { messageId });
  *
  *       -----------------------------------
  *       SOCKET LISTEN EVENTS
  *       -----------------------------------
  *
- *       1. joinedGroup
- *
+ *       1. groupJoined
  *       2. receiveMessage
- *
  *       3. messageDeleted
- *
  *       4. messagePinned
- *
  *       5. messageUnpinned
- *
  *       6. errorMessage
- *
  *       7. messageReacted
- *
  *       8. messageReactionRemoved
- *
  *       9. messageStarred
- *
  *       10. messageUnstarred
- * 
+ *
  *     tags:
  *       - Socket Events
  *

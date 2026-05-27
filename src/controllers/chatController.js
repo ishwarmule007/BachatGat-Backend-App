@@ -6,19 +6,15 @@ const cloudinary =
 
 const streamifier =
     require("streamifier");
+
 const getGroupMessages = async(req, res) => {
     try {
-
         const { groupCode } = req.params;
-
         const userId = req.user._id;
 
-        const group = await Group.findOne({
-            groupCode
-        });
+        const group = await Group.findOne({ groupCode });
 
         if (!group) {
-
             return res.status(404).json({
                 message: "Group not found",
             });
@@ -32,7 +28,6 @@ const getGroupMessages = async(req, res) => {
         );
 
         if (!isApprovedMember) {
-
             return res.status(403).json({
                 message: "You are not approved member of this group",
             });
@@ -49,68 +44,58 @@ const getGroupMessages = async(req, res) => {
         };
 
         if (clearData) {
-
             messageFilter.createdAt = {
                 $gt: clearData.clearedAt,
             };
         }
 
         const messages = await Message.find(messageFilter)
+            .populate("senderId", "fullName mobileNumber roleSelection")
+            .populate("reactions.userId", "fullName mobileNumber roleSelection")
+            .populate("starredBy.userId", "fullName mobileNumber roleSelection")
+            .populate({
+                path: "replyTo",
+                populate: {
+                    path: "senderId",
+                    select: "fullName mobileNumber roleSelection",
+                },
+            })
+            .sort({ createdAt: 1 });
 
-        .populate(
-            "senderId",
-            "fullName mobileNumber roleSelection"
-        )
+        const formattedMessages = messages.map((msg) => {
+            const obj = msg.toObject();
 
-        .populate(
-            "reactions.userId",
-            "fullName mobileNumber roleSelection"
-        )
+            return {
+                ...obj,
 
-        .populate(
-            "starredBy.userId",
-            "fullName mobileNumber roleSelection"
-        )
-
-        .populate({
-            path: "replyTo",
-            populate: {
-                path: "senderId",
-                select: "fullName mobileNumber roleSelection",
-            },
-        })
-
-        .sort({
-            createdAt: 1,
+                // ✅ FIXED replyTo structure (stable for frontend)
+                replyTo: obj.replyTo ? {
+                    messageId: obj.replyTo._id,
+                    message: obj.replyTo.message,
+                    messageType: obj.replyTo.messageType,
+                    sender: obj.replyTo.senderId ? {
+                        _id: obj.replyTo.senderId._id,
+                        fullName: obj.replyTo.senderId.fullName,
+                    } : null,
+                } : null,
+                isStarredByMe: obj.starredBy.some((star) => {
+                    const id =
+                        star.userId ? star.userId._id ? star.userId._id.toString() :
+                        star.userId ? star.userId.toString() :
+                        null : null;
+                    return id === userId.toString();
+                }),
+            };
         });
-
-        const formattedMessages = messages.map((msg) => ({
-
-            ...msg.toObject(),
-
-            isStarredByMe: msg.starredBy.some(
-                (star) =>
-                star.userId &&
-                star.userId._id.toString() === userId.toString()
-            ),
-        }));
 
         res.status(200).json({
-
             message: "Messages fetched successfully",
-
             groupCode: group.groupCode,
-
-            clearedAt: clearData ?
-                clearData.clearedAt : null,
-
+            clearedAt: clearData ? clearData.clearedAt : null,
             totalMessages: formattedMessages.length,
-
             messages: formattedMessages,
         });
-
     } catch (error) {
-
         res.status(500).json({
             message: "Failed to fetch messages",
             error: error.message,
