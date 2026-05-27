@@ -161,8 +161,6 @@ const initializeSocket = (server) => {
                         String(
                             groupCode || ""
                         ).trim();
-
-                    // VALIDATION
                     if (!cleanGroupCode) {
 
                         return socket.emit(
@@ -203,8 +201,6 @@ const initializeSocket = (server) => {
                             }
                         );
                     }
-
-                    // IMAGE SIZE
                     if (
                         messageType ===
                         "image" &&
@@ -218,8 +214,6 @@ const initializeSocket = (server) => {
                             }
                         );
                     }
-
-                    // VIDEO SIZE
                     if (
                         messageType ===
                         "video" &&
@@ -233,8 +227,6 @@ const initializeSocket = (server) => {
                             }
                         );
                     }
-
-                    // AUDIO SIZE
                     if (
                         messageType ===
                         "audio" &&
@@ -248,8 +240,6 @@ const initializeSocket = (server) => {
                             }
                         );
                     }
-
-                    // CHECK GROUP
                     const group =
                         await Group.findOne({
                             groupCode: cleanGroupCode,
@@ -263,8 +253,6 @@ const initializeSocket = (server) => {
                             }
                         );
                     }
-
-                    // CHECK MEMBER
                     const isApprovedMember =
                         group.members.some(
                             (m) =>
@@ -283,8 +271,6 @@ const initializeSocket = (server) => {
                             }
                         );
                     }
-
-                    // REPLY VALIDATION
                     if (
                         replyTo &&
                         !mongoose.Types.ObjectId.isValid(
@@ -298,8 +284,33 @@ const initializeSocket = (server) => {
                             }
                         );
                     }
+                    let repliedMessage = null;
 
-                    // MEDIA EXPIRY
+                    if (replyTo) {
+
+                        repliedMessage = await Message.findById(replyTo);
+
+                        if (!repliedMessage) {
+                            return socket.emit("errorMessage", {
+                                message: "Reply message not found"
+                            });
+                        }
+
+                        if (
+                            repliedMessage.groupId.toString() !==
+                            group._id.toString()
+                        ) {
+                            return socket.emit("errorMessage", {
+                                message: "Reply message does not belong to this group"
+                            });
+                        }
+
+                        if (repliedMessage.isDeleted) {
+                            return socket.emit("errorMessage", {
+                                message: "Cannot reply to deleted message"
+                            });
+                        }
+                    }
                     const mediaExpireDate =
                         messageType ===
                         "image" ||
@@ -316,8 +327,6 @@ const initializeSocket = (server) => {
                             1000
                         ) :
                         null;
-
-                    // CREATE MESSAGE
                     const newMessage =
                         await Message.create({
                             groupId: group._id,
@@ -378,11 +387,6 @@ const initializeSocket = (server) => {
                                 select: "fullName",
                             },
                         });
-
-                    // JOIN ROOM
-                    socket.join(
-                        cleanGroupCode
-                    );
 
                     // SEND MESSAGE
                     io.to(
