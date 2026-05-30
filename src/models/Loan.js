@@ -24,13 +24,6 @@ const loanSchema = new mongoose.Schema({
         required: true,
         min: 1
     },
-
-    purpose: {
-        type: String,
-        trim: true,
-        default: ""
-    },
-
     interestPercent: {
         type: Number,
         required: true,
