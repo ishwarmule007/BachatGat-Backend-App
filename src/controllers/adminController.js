@@ -695,11 +695,10 @@ const removeMemberFromGroup = async(req, res) => {
             groupId: group._id,
             userId: memberId,
             $or: [{
-                    status: "pending",
+                    loanStatus: "ACTIVE",
                 },
                 {
-                    status: "approved",
-                    remainingAmount: { $gt: 0 },
+                    loanStatus: "OVERDUE",
                 },
             ],
         });
@@ -864,7 +863,7 @@ const deleteGroupByAdmin = async(req, res) => {
         }
         const activeLoan = await Loan.findOne({
             groupId,
-            status: { $in: ["approved", "active"] },
+            loanStatus: { $in: ["ACTIVE", "OVERDUE"] },
         });
 
         if (activeLoan) {
