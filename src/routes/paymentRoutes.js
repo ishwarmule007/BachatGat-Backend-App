@@ -15,7 +15,7 @@ const {
 } = require("../controllers/paymentController");
 const {
     createPaymentRequest
-} = require("../controllers/contibutionController");
+} = require("../controllers/contributionController");
 const {
     getAdminPaymentDashboard
 } = require("../controllers/adminController");

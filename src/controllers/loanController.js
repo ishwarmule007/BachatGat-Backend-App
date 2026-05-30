@@ -3,7 +3,7 @@ const Installment = require("../models/Installment");
 const Group = require("../models/Group");
 const User = require("../models/User");
 const PaymentRequest = require("../models/PaymentRequest");
-exports.createLoan = async(req, res) => {
+const createLoan = async(req, res) => {
     try {
         const adminId = req.user._id;
 
@@ -143,7 +143,7 @@ exports.createLoan = async(req, res) => {
     }
 };
 
-exports.getLoanDetails = async(req, res) => {
+const getLoanDetailsByAdmin = async(req, res) => {
     try {
 
         const { loanId } = req.params;
@@ -179,7 +179,7 @@ exports.getLoanDetails = async(req, res) => {
         });
     }
 };
-exports.getGroupLoans = async(req, res) => {
+const getGroupLoans = async(req, res) => {
     try {
 
         const { groupCode } = req.params;
@@ -222,7 +222,7 @@ exports.getGroupLoans = async(req, res) => {
     }
 };
 
-exports.getOverdueLoans = async(req, res) => {
+const getOverdueLoans = async(req, res) => {
     try {
 
         const overdueLoans =
@@ -252,7 +252,7 @@ exports.getOverdueLoans = async(req, res) => {
     }
 };
 
-exports.approveLoanPayment = async(req, res) => {
+const approveLoanPayment = async(req, res) => {
     try {
 
         const { paymentRequestId } =
@@ -321,7 +321,7 @@ exports.approveLoanPayment = async(req, res) => {
     }
 };
 
-exports.rejectLoanPayment = async(req, res) => {
+const rejectLoanPayment = async(req, res) => {
     try {
 
         const {
@@ -361,7 +361,7 @@ exports.rejectLoanPayment = async(req, res) => {
     }
 };
 
-exports.getMyLoans = async(req, res) => {
+const getMyLoans = async(req, res) => {
     try {
 
         const memberId = req.user._id;
@@ -391,7 +391,7 @@ exports.getMyLoans = async(req, res) => {
         });
     }
 };
-exports.getLoanDetails = async(req, res) => {
+const getLoanDetailsByMember = async(req, res) => {
     try {
 
         const memberId = req.user._id;
@@ -426,7 +426,7 @@ exports.getLoanDetails = async(req, res) => {
         });
     }
 };
-exports.getLoanInstallments = async(
+const getLoanInstallments = async(
     req,
     res
 ) => {
@@ -468,7 +468,7 @@ exports.getLoanInstallments = async(
         });
     }
 };
-exports.payLoanInstallment = async(
+const payLoanInstallment = async(
     req,
     res
 ) => {
@@ -572,7 +572,7 @@ exports.payLoanInstallment = async(
         });
     }
 };
-exports.getPendingInstallments =
+const getPendingInstallments =
     async(req, res) => {
 
         try {
@@ -617,7 +617,7 @@ exports.getPendingInstallments =
             });
         }
     };
-exports.generateLoanInstallmentPaymentLink = async(req, res) => {
+const generateLoanInstallmentPaymentLink = async(req, res) => {
     try {
         const userId = req.user._id;
 
@@ -743,3 +743,18 @@ exports.generateLoanInstallmentPaymentLink = async(req, res) => {
         });
     }
 };
+
+module.exports = {
+    createLoan,
+    getLoanDetailsByAdmin,
+    getLoanDetailsByMember,
+    getGroupLoans,
+    getOverdueLoans,
+    approveLoanPayment,
+    rejectLoanPayment,
+    getMyLoans,
+    getLoanInstallments,
+    payLoanInstallment,
+    getPendingInstallments,
+    generateLoanInstallmentPaymentLink
+}
