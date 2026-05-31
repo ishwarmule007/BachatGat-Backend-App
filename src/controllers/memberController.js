@@ -411,22 +411,31 @@ const getMemberProfile = async(req, res) => {
 };
 const leaveGroup = async(req, res) => {
     try {
+        const { groupId } = req.body;
         const userId = req.user._id;
-        const { groupId } = req.params;
 
-        const group = await Group.findOne({
-            _id: groupId,
-            members: {
-                $elemMatch: {
-                    userId,
-                    status: "approved"
-                }
-            }
-        });
+        if (!groupId) {
+            return res.status(400).json({
+                message: "Group ID is required"
+            });
+        }
+        const group = await Group.findById(groupId);
 
         if (!group) {
             return res.status(404).json({
                 message: "Group not found"
+            });
+        }
+
+        const member = group.members.find(
+            m =>
+            m.userId.toString() === userId.toString() &&
+            m.status === "approved"
+        );
+
+        if (!member) {
+            return res.status(404).json({
+                message: "You are not an approved member of this group"
             });
         }
         const existingLoanApplication = await LoanApplication.findOne({
