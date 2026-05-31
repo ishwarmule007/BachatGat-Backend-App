@@ -20,11 +20,9 @@ const getGroupMessages = async(req, res) => {
             });
         }
 
-        let isAdmin = false;
-
-        if (user.roleSelection === "admin") {
-            isAdmin = group.adminId && group.adminId.toString() === userId.toString();
-        }
+        const isAdmin =
+            group.adminId &&
+            group.adminId.toString() === userId.toString();
         const member = group.members.find(
             (m) =>
             m.userId &&
@@ -117,7 +115,9 @@ const clearChatForMe = async(req, res) => {
             return res.status(404).json({ message: "Group not found" });
         }
 
-        let isAdmin = false;
+        const isAdmin =
+            group.adminId &&
+            group.adminId.toString() === userId.toString();
 
         if (user.roleSelection === "admin") {
             isAdmin = group.adminId && group.adminId.toString() === userId.toString();
