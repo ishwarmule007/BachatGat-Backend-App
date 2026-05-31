@@ -438,7 +438,7 @@ const leaveGroup = async(req, res) => {
                 message: "You are not an approved member of this group"
             });
         }
-        const existingLoanApplication = await LoanApplication.findOne({
+        const existingLoanApplication = await Loan.findOne({
             groupId,
             userId,
             status: {
