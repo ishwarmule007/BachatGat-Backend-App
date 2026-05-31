@@ -117,17 +117,22 @@ const clearChatForMe = async(req, res) => {
             return res.status(404).json({ message: "Group not found" });
         }
 
-        const isApprovedMember = group.members.some(
+        let isAdmin = false;
+
+        if (user.roleSelection === "admin") {
+            isAdmin = group.adminId && group.adminId.toString() === userId.toString();
+        }
+        const member = group.members.find(
             (m) =>
             m.userId &&
-            m.userId.toString() === userId.toString() &&
-            m.status === "approved"
+            m.userId._id.toString() === userId.toString()
         );
-
-        if (!isApprovedMember) {
-            return res.status(403).json({
-                message: "You are not approved member of this group",
-            });
+        if (!isAdmin) {
+            if (!member || member.status !== "approved") {
+                return res.status(403).json({
+                    message: "You are not approved member of this group"
+                });
+            }
         }
 
         const clearData = await ChatClear.findOneAndUpdate({ userId, groupId: group._id }, { clearedAt: new Date() }, { new: true, upsert: true });
