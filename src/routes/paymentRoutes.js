@@ -11,11 +11,9 @@ const {
     getPaymentRequestDetail,
     generateContributionPaymentLink,
     resubmitPaymentRequest,
+    createPaymentRequest,
     getRejectedPaymentRequestDetails
 } = require("../controllers/paymentController");
-const {
-    createPaymentRequest
-} = require("../controllers/contributionController");
 const {
     getAdminPaymentDashboard
 } = require("../controllers/adminController");

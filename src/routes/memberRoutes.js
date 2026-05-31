@@ -323,7 +323,7 @@ router.post(
 );
 /**
  * @swagger
- * /api/members/leave-group:
+ * /api/member/leave-group:
  *   post:
  *     summary: Leave a group
  *     tags: [Member]
