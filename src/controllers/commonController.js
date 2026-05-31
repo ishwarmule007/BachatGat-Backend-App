@@ -139,8 +139,12 @@ const getMyGroups = async(req, res) => {
         const user = await User.findById(userId);
 
         const groups = await Group.find({
-            "members.userId": userId,
-            "members.status": "approved"
+            members: {
+                $elemMatch: {
+                    userId,
+                    status: "approved"
+                }
+            }
         });
 
         const formattedGroups = groups.map((group) => ({
