@@ -30,6 +30,8 @@ const notificationSchema = new mongoose.Schema({
             "member_approved",
             "member_rejected",
             "announcement",
+            "invite_rejected",
+            "member_joined",
 
             "payment_request_received",
             "payment_request_sent",
