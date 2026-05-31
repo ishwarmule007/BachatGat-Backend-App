@@ -75,31 +75,50 @@ const getGroupMembers = async(req, res) => {
 const getGroupDetails = async(req, res) => {
     try {
         const { groupCode } = req.params;
-        const group = await Group.findOne({ groupCode }).populate(
-            "members.userId",
-            "fullName mobileNumber gender role"
-        );
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+
+        const group = await Group.findOne({ groupCode })
+            .populate("members.userId", "fullName mobileNumber gender role");
+
         if (!group) {
             return res.status(404).json({
                 message: "Group not found"
             });
         }
-        const member = group.members.find((m) => m.userId && m.userId._id.toString() === req.user._id.toString());
-        if (!member || member.status !== "approved") {
-            return res.status(403).json({
-                message: "You are not approved member of this group"
-            });
+
+        let isAdmin = false;
+
+        if (user.roleSelection === "admin") {
+            isAdmin = group.admin && group.adminId.toString() === userId.toString();
         }
+        const member = group.members.find(
+            (m) =>
+            m.userId &&
+            m.userId._id.toString() === userId.toString()
+        );
+        if (!isAdmin) {
+            if (!member || member.status !== "approved") {
+                return res.status(403).json({
+                    message: "You are not approved member of this group"
+                });
+            }
+        }
+
         const approvedMembers = group.members.filter(
-            (member) => member.status === "approved"
+            (m) => m.status === "approved"
         );
+
         const pendingMembers = group.members.filter(
-            (member) => member.status === "pending"
+            (m) => m.status === "pending"
         );
+
         const rejectedMembers = group.members.filter(
-            (member) => member.status === "rejected"
+            (m) => m.status === "rejected"
         );
-        res.status(200).json({
+
+        return res.status(200).json({
             message: "Group details fetched successfully",
             group: {
                 groupId: group._id,
@@ -122,11 +141,13 @@ const getGroupDetails = async(req, res) => {
                     longitude: group.location ? group.location.longitude : null
                 },
                 audioCall: true,
-                videoCall: true
+                videoCall: true,
+
             }
         });
+
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             message: "Failed to fetch group details",
             error: error.message
         });
