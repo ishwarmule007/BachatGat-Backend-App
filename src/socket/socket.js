@@ -75,17 +75,22 @@ const initializeSocket = (server) => {
                     });
                 }
 
-                const isApprovedMember = group.members.some(
+                let isAdmin = false;
+
+                if (user.roleSelection === "admin") {
+                    isAdmin = group.adminId && group.adminId.toString() === userId.toString();
+                }
+                const member = group.members.find(
                     (m) =>
                     m.userId &&
-                    m.userId.toString() === socket.user._id.toString() &&
-                    m.status === "approved"
+                    m.userId._id.toString() === userId.toString()
                 );
-
-                if (!isApprovedMember) {
-                    return socket.emit("errorMessage", {
-                        message: "You are not approved member of this group"
-                    });
+                if (!isAdmin) {
+                    if (!member || member.status !== "approved") {
+                        return res.status(403).json({
+                            message: "You are not approved member of this group"
+                        });
+                    }
                 }
 
                 socket.join(cleanGroupCode);

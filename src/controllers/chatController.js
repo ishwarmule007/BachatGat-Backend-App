@@ -20,17 +20,22 @@ const getGroupMessages = async(req, res) => {
             });
         }
 
-        const isApprovedMember = group.members.some(
+        let isAdmin = false;
+
+        if (user.roleSelection === "admin") {
+            isAdmin = group.adminId && group.adminId.toString() === userId.toString();
+        }
+        const member = group.members.find(
             (m) =>
             m.userId &&
-            m.userId.toString() === userId.toString() &&
-            m.status === "approved"
+            m.userId._id.toString() === userId.toString()
         );
-
-        if (!isApprovedMember) {
-            return res.status(403).json({
-                message: "You are not approved member of this group",
-            });
+        if (!isAdmin) {
+            if (!member || member.status !== "approved") {
+                return res.status(403).json({
+                    message: "You are not approved member of this group"
+                });
+            }
         }
 
         const clearData = await ChatClear.findOne({
@@ -67,8 +72,6 @@ const getGroupMessages = async(req, res) => {
 
             return {
                 ...obj,
-
-                // ✅ FIXED replyTo structure (stable for frontend)
                 replyTo: obj.replyTo ? {
                     messageId: obj.replyTo._id,
                     message: obj.replyTo.message,
