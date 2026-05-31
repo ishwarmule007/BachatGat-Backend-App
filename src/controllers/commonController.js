@@ -91,7 +91,7 @@ const getGroupDetails = async(req, res) => {
         let isAdmin = false;
 
         if (user.roleSelection === "admin") {
-            isAdmin = group.admin && group.adminId.toString() === userId.toString();
+            isAdmin = group.adminId && group.adminId.toString() === userId.toString();
         }
         const member = group.members.find(
             (m) =>
