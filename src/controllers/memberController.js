@@ -159,7 +159,7 @@ const rejectGroupRequest = async(req, res) => {
     try {
         const { groupCode } = req.body;
         const userId = req.user._id;
-
+        const user = await User.findById(userId).select("fullName");
         if (!groupCode) {
             return res.status(400).json({
                 message: "Group code is required"
