@@ -70,7 +70,70 @@ router.post(
     createPaymentRequest
 );
 
-
+/**
+ * @swagger
+ * /api/payments/member/history:
+ *   get:
+ *     summary: Get payment history of logged in member
+ *     tags: [Payment]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Payment history fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Payment history fetched successfully"
+ *                 payments:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "665c1f9a2b7d8f1234567890"
+ *                       amount:
+ *                         type: number
+ *                         example: 500
+ *                       month:
+ *                         type: string
+ *                         example: "2026-05"
+ *                       status:
+ *                         type: string
+ *                         example: "accepted"
+ *                       screenshotUrl:
+ *                         type: string
+ *                         example: "https://res.cloudinary.com/demo/image.jpg"
+ *                       groupId:
+ *                         type: object
+ *                         properties:
+ *                           groupName:
+ *                             type: string
+ *                             example: "Developer Group"
+ *                           groupCode:
+ *                             type: string
+ *                             example: "SBG-001"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *       401:
+ *         description: Unauthorized - Token missing or invalid
+ *       500:
+ *         description: Internal server error
+ */
+router.get(
+    "/member/history",
+    authMiddleware,
+    getMemberPaymentHistory
+);
 /**
  * @swagger
  * /api/payments/member/{groupCode}:
@@ -150,70 +213,7 @@ router.get(
     getMemberPaymentPage
 );
 
-/**
- * @swagger
- * /api/payments/member/history:
- *   get:
- *     summary: Get payment history of logged in member
- *     tags: [Payment]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Payment history fetched successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Payment history fetched successfully"
- *                 payments:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       _id:
- *                         type: string
- *                         example: "665c1f9a2b7d8f1234567890"
- *                       amount:
- *                         type: number
- *                         example: 500
- *                       month:
- *                         type: string
- *                         example: "2026-05"
- *                       status:
- *                         type: string
- *                         example: "accepted"
- *                       screenshotUrl:
- *                         type: string
- *                         example: "https://res.cloudinary.com/demo/image.jpg"
- *                       groupId:
- *                         type: object
- *                         properties:
- *                           groupName:
- *                             type: string
- *                             example: "Developer Group"
- *                           groupCode:
- *                             type: string
- *                             example: "SBG-001"
- *                       createdAt:
- *                         type: string
- *                         format: date-time
- *       401:
- *         description: Unauthorized - Token missing or invalid
- *       500:
- *         description: Internal server error
- */
-router.get(
-    "/member/history",
-    authMiddleware,
-    getMemberPaymentHistory
-);
+
 
 /**
  * @swagger
