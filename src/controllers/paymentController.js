@@ -86,34 +86,45 @@ const createPaymentRequest = async(req, res) => {
         );
 
         const extractedText = ocrResult.data.text;
-
-        console.log("=================================");
-        console.log("OCR TEXT");
-        console.log(extractedText);
-        console.log("=================================");
-
-        // Extract Amount
+        // Amount (₹1,050 or ₹ 1050)
         const amountMatch = extractedText.match(
-            /(?:₹|Rs\.?|INR)\s*([\d,]+(?:\.\d+)?)/i
+            /₹\s*([\d,]+(?:\.\d+)?)/i
         );
 
-        // Extract Transaction ID / UTR
-        const transactionMatch = extractedText.match(
-            /(UTR|Transaction ID|Ref No\.?|Reference No\.?)\s*:?\s*([A-Z0-9]+)/i
+        // Transaction ID
+        const transactionIdMatch = extractedText.match(
+            /Transaction\s*ID\s*([A-Z0-9]+)/i
+        );
+
+        // UTR
+        const utrMatch = extractedText.match(
+            /UTR[:\s]*([A-Z0-9]+)/i
+        );
+
+        // Paid To
+        const paidToMatch = extractedText.match(
+            /Paid\s*to\s*([\w\s]+)/i
+        );
+        //date
+        const dateMatch = extractedText.match(
+            /\d{1,2}\s+[A-Za-z]{3}\s+\d{4}/
         );
 
         const extractedInfo = {
             extractedAmount: amountMatch ?
-                Number(amountMatch[1].replace(/,/g, "")) :
-                null,
+                Number(amountMatch[1].replace(/,/g, "")) : null,
 
-            transactionId: transactionMatch ?
-                transactionMatch[2] :
-                null,
+            transactionId: transactionIdMatch ?
+                transactionIdMatch[1] :
+                (utrMatch ? utrMatch[1] : null),
 
-            paidTo: null,
+            paidTo: paidToMatch ?
+                paidToMatch[1].trim() : null,
+
             paidFrom: null,
-            transactionDate: null,
+
+            transactionDate: dateMatch ?
+                new Date(dateMatch[0]) : null,
         };
 
         // Upload to cloudinary
