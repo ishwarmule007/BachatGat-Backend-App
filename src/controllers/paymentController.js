@@ -6,7 +6,7 @@ const { createNotification } = require("../utils/createNotification");
 const cloudinary = require("../config/cloudinary");
 const sharp = require("sharp");
 const streamifier = require("streamifier");
-
+const Tesseract = require("tesseract.js");
 
 const createPaymentRequest = async(req, res) => {
     try {
@@ -14,7 +14,6 @@ const createPaymentRequest = async(req, res) => {
             groupCode,
             month,
             upiId,
-            extractedInfo,
         } = req.body;
 
         if (!groupCode || !month || !upiId) {
@@ -74,12 +73,48 @@ const createPaymentRequest = async(req, res) => {
                 message: "Payment request already pending for this month",
             });
         }
-
         // Compress image
         const compressedImageBuffer = await sharp(req.file.buffer)
             .resize({ width: 800 })
             .jpeg({ quality: 60 })
             .toBuffer();
+
+        // OCR
+        const ocrResult = await Tesseract.recognize(
+            compressedImageBuffer,
+            "eng"
+        );
+
+        const extractedText = ocrResult.data.text;
+
+        console.log("=================================");
+        console.log("OCR TEXT");
+        console.log(extractedText);
+        console.log("=================================");
+
+        // Extract Amount
+        const amountMatch = extractedText.match(
+            /(?:₹|Rs\.?|INR)\s*([\d,]+(?:\.\d+)?)/i
+        );
+
+        // Extract Transaction ID / UTR
+        const transactionMatch = extractedText.match(
+            /(UTR|Transaction ID|Ref No\.?|Reference No\.?)\s*:?\s*([A-Z0-9]+)/i
+        );
+
+        const extractedInfo = {
+            extractedAmount: amountMatch ?
+                Number(amountMatch[1].replace(/,/g, "")) :
+                null,
+
+            transactionId: transactionMatch ?
+                transactionMatch[2] :
+                null,
+
+            paidTo: null,
+            paidFrom: null,
+            transactionDate: null,
+        };
 
         // Upload to cloudinary
         const uploadFromBuffer = () => {
@@ -93,12 +128,13 @@ const createPaymentRequest = async(req, res) => {
                     }
                 );
 
-                streamifier.createReadStream(compressedImageBuffer).pipe(uploadStream);
+                streamifier
+                    .createReadStream(compressedImageBuffer)
+                    .pipe(uploadStream);
             });
         };
 
         const uploadedImage = await uploadFromBuffer();
-
         const amount = member.monthlyContributionAmount || 0;
 
         const paymentRequest = await PaymentRequest.create({
