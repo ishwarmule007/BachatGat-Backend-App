@@ -75,11 +75,10 @@ const initializeSocket = (server) => {
                     });
                 }
                 const user = await User.findById(userId);
-                let isAdmin = false;
+                const isAdmin =
+                    group.adminId &&
+                    group.adminId.toString() === userId.toString();
 
-                if (user.roleSelection === "admin") {
-                    isAdmin = group.adminId && group.adminId.toString() === userId.toString();
-                }
                 const member = group.members.find(
                     (m) =>
                     m.userId &&
