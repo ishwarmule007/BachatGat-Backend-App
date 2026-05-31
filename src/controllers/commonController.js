@@ -143,7 +143,7 @@ const getMyGroups = async(req, res) => {
 
         if (user.roleSelection === "admin") {
             groups = await Group.find({
-                admin: userId
+                adminId: userId
             });
         } else {
 
