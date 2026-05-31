@@ -257,11 +257,7 @@ const createGroup = async(req, res) => {
                 longitude: location.longitude
             },
             adminId: req.user._id,
-            members: [{
-                userId: req.user._id,
-                roleInGroup: "admin",
-                status: "approved"
-            }],
+            members: [],
             durationOfGroup: groupDurationInYears || 0
         });
         await newGroup.save();
