@@ -74,7 +74,7 @@ const initializeSocket = (server) => {
                         message: "Group not found"
                     });
                 }
-                const user = await User.findById(userId);
+                const userId = socket.user._id;
                 const isAdmin =
                     group.adminId &&
                     group.adminId.toString() === userId.toString();
@@ -82,11 +82,11 @@ const initializeSocket = (server) => {
                 const member = group.members.find(
                     (m) =>
                     m.userId &&
-                    m.userId._id.toString() === userId.toString()
+                    (m.userId ? ._id || m.userId).toString() === userId.toString()
                 );
                 if (!isAdmin) {
                     if (!member || member.status !== "approved") {
-                        return res.status(403).json({
+                        return socket.emit("errorMessage", {
                             message: "You are not approved member of this group"
                         });
                     }
