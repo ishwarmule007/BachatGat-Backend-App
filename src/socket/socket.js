@@ -594,19 +594,23 @@ const initializeSocket = (server) => {
                     });
                 }
 
-                const isApprovedMember = group.members.some(
+                const userId = socket.user._id;
+                const isAdmin =
+                    group.adminId &&
+                    group.adminId.toString() === userId.toString();
+
+                const member = group.members.find(
                     (m) =>
                     m.userId &&
-                    m.userId.toString() === socket.user._id.toString() &&
-                    m.status === "approved"
+                    ((m.userId._id || m.userId).toString() === userId.toString())
                 );
-
-                if (!isApprovedMember) {
-                    return socket.emit("errorMessage", {
-                        message: "You are not approved member of this group"
-                    });
+                if (!isAdmin) {
+                    if (!member || member.status !== "approved") {
+                        return socket.emit("errorMessage", {
+                            message: "You are not approved member of this group"
+                        });
+                    }
                 }
-
                 const existingReactionIndex = message.reactions.findIndex(
                     (reaction) =>
                     reaction.userId.toString() === socket.user._id.toString()
@@ -665,17 +669,29 @@ const initializeSocket = (server) => {
                     });
                 }
 
-                const isApprovedMember = group.members.some(
+                const userId = socket.user._id;
+                const isAdmin =
+                    group.adminId &&
+                    group.adminId.toString() === userId.toString();
+
+                const member = group.members.find(
                     (m) =>
                     m.userId &&
-                    m.userId.toString() === socket.user._id.toString() &&
-                    m.status === "approved"
+                    ((m.userId._id || m.userId).toString() === userId.toString())
                 );
-
-                if (!isApprovedMember) {
-                    return socket.emit("errorMessage", {
-                        message: "You are not approved member of this group"
-                    });
+                if (!isAdmin) {
+                    if (!member || member.status !== "approved") {
+                        return socket.emit("errorMessage", {
+                            message: "You are not approved member of this group"
+                        });
+                    }
+                }
+                if (!isAdmin) {
+                    if (!member || member.status !== "approved") {
+                        return socket.emit("errorMessage", {
+                            message: "You are not approved member of this group"
+                        });
+                    }
                 }
 
                 message.reactions = message.reactions.filter(
@@ -725,17 +741,22 @@ const initializeSocket = (server) => {
                     });
                 }
 
-                const isApprovedMember = group.members.some(
+                const userId = socket.user._id;
+                const isAdmin =
+                    group.adminId &&
+                    group.adminId.toString() === userId.toString();
+
+                const member = group.members.find(
                     (m) =>
                     m.userId &&
-                    m.userId.toString() === socket.user._id.toString() &&
-                    m.status === "approved"
+                    ((m.userId._id || m.userId).toString() === userId.toString())
                 );
-
-                if (!isApprovedMember) {
-                    return socket.emit("errorMessage", {
-                        message: "You are not approved member of this group"
-                    });
+                if (!isAdmin) {
+                    if (!member || member.status !== "approved") {
+                        return socket.emit("errorMessage", {
+                            message: "You are not approved member of this group"
+                        });
+                    }
                 }
 
                 const alreadyStarred = message.starredBy.some(
@@ -788,17 +809,22 @@ const initializeSocket = (server) => {
                     });
                 }
 
-                const isApprovedMember = group.members.some(
+                const userId = socket.user._id;
+                const isAdmin =
+                    group.adminId &&
+                    group.adminId.toString() === userId.toString();
+
+                const member = group.members.find(
                     (m) =>
                     m.userId &&
-                    m.userId.toString() === socket.user._id.toString() &&
-                    m.status === "approved"
+                    ((m.userId._id || m.userId).toString() === userId.toString())
                 );
-
-                if (!isApprovedMember) {
-                    return socket.emit("errorMessage", {
-                        message: "You are not approved member of this group"
-                    });
+                if (!isAdmin) {
+                    if (!member || member.status !== "approved") {
+                        return socket.emit("errorMessage", {
+                            message: "You are not approved member of this group"
+                        });
+                    }
                 }
 
                 message.starredBy = message.starredBy.filter(
