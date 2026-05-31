@@ -119,9 +119,6 @@ const clearChatForMe = async(req, res) => {
             group.adminId &&
             group.adminId.toString() === userId.toString();
 
-        if (user.roleSelection === "admin") {
-            isAdmin = group.adminId && group.adminId.toString() === userId.toString();
-        }
         const member = group.members.find(
             (m) =>
             m.userId &&
