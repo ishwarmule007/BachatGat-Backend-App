@@ -138,14 +138,24 @@ const getMyGroups = async(req, res) => {
 
         const user = await User.findById(userId);
 
-        const groups = await Group.find({
-            members: {
-                $elemMatch: {
-                    userId,
-                    status: "approved"
+        let groups = [];
+
+
+        if (user.roleSelection === "admin") {
+            groups = await Group.find({
+                admin: userId
+            });
+        } else {
+
+            groups = await Group.find({
+                members: {
+                    $elemMatch: {
+                        userId,
+                        status: "approved"
+                    }
                 }
-            }
-        });
+            });
+        }
 
         const formattedGroups = groups.map((group) => ({
             groupId: group._id,
@@ -159,16 +169,19 @@ const getMyGroups = async(req, res) => {
             formationDate: group.formationDate,
             totalSaving: group.totalSaving || 0,
             totalLoanGiven: group.totalLoanGiven || 0,
-            totalMembers: group.members.filter((member) => member.status === "approved").length,
+
+            totalMembers: group.members.filter(
+                (member) => member.status === "approved"
+            ).length,
         }));
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Groups fetched successfully",
             groups: formattedGroups
         });
 
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             message: error.message
         });
     }
