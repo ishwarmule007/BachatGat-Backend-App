@@ -82,7 +82,7 @@ const initializeSocket = (server) => {
                 const member = group.members.find(
                     (m) =>
                     m.userId &&
-                    (m.userId ? ._id || m.userId).toString() === userId.toString()
+                    ((m.userId._id || m.userId).toString() === userId.toString())
                 );
                 if (!isAdmin) {
                     if (!member || member.status !== "approved") {
