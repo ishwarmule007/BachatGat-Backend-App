@@ -74,7 +74,7 @@ const initializeSocket = (server) => {
                         message: "Group not found"
                     });
                 }
-
+                const user = await User.findById(userId);
                 let isAdmin = false;
 
                 if (user.roleSelection === "admin") {
