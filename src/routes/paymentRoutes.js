@@ -517,12 +517,105 @@ router.patch(
     adminMiddleware,
     updatePaymentRequestStatus
 );
+/**
+ * @swagger
+ * /api/payments/resubmit/{paymentRequestId}:
+ *   post:
+ *     summary: Resubmit a rejected payment request with a new screenshot
+ *     tags: [Payment]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: paymentRequestId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "665c1f9a2b7d8f1234567890"
+ *         description: Payment request ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - screenshot
+ *             properties:
+ *               screenshot:
+ *                 type: string
+ *                 format: binary
+ *               additionalComments:
+ *                 type: string
+ *                 example: "Uploaded a clearer screenshot"
+ *     responses:
+ *       200:
+ *         description: Payment request resubmitted successfully
+ *       400:
+ *         description: Payment request is not eligible for resubmission
+ *       401:
+ *         description: Unauthorized - Token missing or invalid
+ *       403:
+ *         description: User is not authorized to resubmit this payment request
+ *       404:
+ *         description: Payment request not found
+ *       500:
+ *         description: Internal server error
+ */
 router.post(
     "/resubmit/:paymentRequestId",
     authMiddleware,
     upload.single("screenshot"),
     resubmitPaymentRequest
 );
+/**
+ * @swagger
+ * /api/payments/rejected/{paymentRequestId}:
+ *   get:
+ *     summary: Get rejected payment request details
+ *     tags: [Payment]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: paymentRequestId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "665c1f9a2b7d8f1234567890"
+ *         description: Rejected payment request ID
+ *     responses:
+ *       200:
+ *         description: Rejected payment request details fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 paymentRequestId:
+ *                   type: string
+ *                 amount:
+ *                   type: number
+ *                 status:
+ *                   type: string
+ *                   example: rejected
+ *                 rejectionReason:
+ *                   type: string
+ *                   example: Screenshot not clear
+ *                 rejectedAt:
+ *                   type: string
+ *                   format: date-time
+ *                 screenshotUrl:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized - Token missing or invalid
+ *       403:
+ *         description: User is not authorized to view this payment request
+ *       404:
+ *         description: Payment request not found
+ *       500:
+ *         description: Internal server error
+ */
 router.get(
     "/rejected/:paymentRequestId",
     authMiddleware,
