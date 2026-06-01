@@ -1,19 +1,38 @@
 const axios = require("axios");
 
-const geocodeAddress = async(address) => {
+const geocodeAddress = async({
+    village,
+    taluka,
+    district,
+    state
+}) => {
     try {
-        const encodedAddress = encodeURIComponent(address);
+        const query = [
+                village,
+                taluka,
+                district,
+                state,
+                "India"
+            ]
+            .filter(Boolean)
+            .join(", ");
 
-        const url =
-            `https://nominatim.openstreetmap.org/search?q=${encodedAddress}&format=json&limit=1`;
-
-        const response = await axios.get(url, {
-            headers: {
-                "User-Agent": "BachatGatApp"
+        const response = await axios.get(
+            "https://nominatim.openstreetmap.org/search", {
+                params: {
+                    q: query,
+                    format: "json",
+                    limit: 1,
+                    countrycodes: "in"
+                },
+                headers: {
+                    "User-Agent": "BachatGatApp/1.0"
+                },
+                timeout: 10000
             }
-        });
+        );
 
-        if (!response.data || response.data.length === 0) {
+        if (!response.data ? response.data.length || 0 : 0) {
             return {
                 latitude: null,
                 longitude: null
@@ -21,11 +40,12 @@ const geocodeAddress = async(address) => {
         }
 
         return {
-            latitude: parseFloat(response.data[0].lat),
-            longitude: parseFloat(response.data[0].lon)
+            latitude: Number(response.data[0].lat),
+            longitude: Number(response.data[0].lon)
         };
-
     } catch (error) {
+        console.error("Geocoding Error:", error.message);
+
         return {
             latitude: null,
             longitude: null
