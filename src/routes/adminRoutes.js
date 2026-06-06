@@ -410,7 +410,10 @@ router.post(
  * @swagger
  * /api/admin/add-member:
  *   post:
- *     summary: Add member to a group
+ *     summary: Add a member to a group
+ *     description: |
+ *       Admin can add a new or existing user into a group with pending status.
+ *       If the user does not exist, a new account is created automatically.
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -431,35 +434,102 @@ router.post(
  *               groupCode:
  *                 type: string
  *                 example: "SBG-001"
+ *
  *               fullName:
  *                 type: string
  *                 example: "Rahul Sharma"
+ *
  *               mobileNumber:
  *                 type: string
  *                 example: "9876543210"
+ *
  *               dateOfBirth:
  *                 type: string
  *                 format: date
  *                 example: "2000-05-19"
+ *
  *               address:
  *                 type: string
  *                 example: "Nashik, Maharashtra"
+ *
  *               monthlyContributionAmount:
  *                 type: number
  *                 example: 500
+ *
  *     responses:
  *       200:
- *         description: Member added successfully and request sent
+ *         description: Member request sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "New member created and group request sent successfully"
+ *
+ *                 status:
+ *                   type: string
+ *                   example: "pending"
+ *
  *       400:
- *         description: Missing required fields or member already exists
+ *         description: Validation error or member already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   examples:
+ *                     missingFields:
+ *                       value: "groupCode, fullName, mobileNumber, dateOfBirth, address and monthlyContributionAmount are required"
+ *
+ *                     existingMember:
+ *                       value: "User already exists in this group with status: pending"
+ *
+ *                     mismatchDetails:
+ *                       value: "Existing user details do not match with provided fullName and dateOfBirth"
+ *
  *       401:
  *         description: Unauthorized - Token missing or invalid
+ *
  *       403:
- *         description: Access denied - Admin only
+ *         description: Forbidden - Only admin or authorized group admin can add members
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   examples:
+ *                     notAdmin:
+ *                       value: "Only Admin can add member"
+ *
+ *                     notAllowed:
+ *                       value: "You are not allowed to add members in this group"
+ *
  *       404:
  *         description: Group not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Group not found"
+ *
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  */
 router.post(
     "/add-member",
