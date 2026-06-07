@@ -6,18 +6,27 @@ const geocodeAddress = async({
     district,
     state
 }) => {
+
     try {
+
+        const query = [
+                village,
+                taluka,
+                district,
+                state,
+                "India"
+            ]
+            .filter(Boolean)
+            .join(", ");
 
         const response = await axios.get(
             "https://nominatim.openstreetmap.org/search", {
                 params: {
-                    village,
-                    county: taluka,
-                    state,
-                    country: "India",
+                    q: query,
                     format: "json",
-                    limit: 5,
-                    addressdetails: 1
+                    limit: 10,
+                    addressdetails: 1,
+                    countrycodes: "in"
                 },
                 headers: {
                     "User-Agent": "BachatGatApp/1.0"
@@ -33,11 +42,36 @@ const geocodeAddress = async({
             };
         }
 
-        const exactMatch = response.data.find(item =>
-            item.address && item.address.village && item.address.village.toLowerCase() === village.toLowerCase()
-        );
+        const matched = response.data.find(item => {
 
-        const location = exactMatch || response.data[0];
+            const address = item.address || {};
+
+            const placeName =
+                address.village ||
+                address.town ||
+                address.city ||
+                "";
+
+            const county =
+                address.county ||
+                "";
+
+            const stateDistrict =
+                address.state_district ||
+                "";
+
+            return (
+                placeName.toLowerCase().includes(village.toLowerCase()) &&
+                (
+                    county.toLowerCase().includes(taluka.toLowerCase()) ||
+                    stateDistrict.toLowerCase().includes(district.toLowerCase())
+                ) &&
+                address.state &&
+                address.state.toLowerCase().includes(state.toLowerCase())
+            );
+        });
+
+        const location = matched || response.data[0];
 
         return {
             latitude: Number(location.lat),
