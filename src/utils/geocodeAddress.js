@@ -7,23 +7,17 @@ const geocodeAddress = async({
     state
 }) => {
     try {
-        const query = [
-                village,
-                taluka,
-                district,
-                state,
-                "India"
-            ]
-            .filter(Boolean)
-            .join(", ");
 
         const response = await axios.get(
             "https://nominatim.openstreetmap.org/search", {
                 params: {
-                    q: query,
+                    village,
+                    county: taluka,
+                    state,
+                    country: "India",
                     format: "json",
-                    limit: 1,
-                    countrycodes: "in"
+                    limit: 5,
+                    addressdetails: 1
                 },
                 headers: {
                     "User-Agent": "BachatGatApp/1.0"
@@ -32,18 +26,26 @@ const geocodeAddress = async({
             }
         );
 
-        if (!response.data ? response.data.length || 0 : 0) {
+        if (!response.data || response.data.length === 0) {
             return {
                 latitude: null,
                 longitude: null
             };
         }
 
+        const exactMatch = response.data.find(item =>
+            item.address && item.address.village && item.address.village.toLowerCase() === village.toLowerCase()
+        );
+
+        const location = exactMatch || response.data[0];
+
         return {
-            latitude: Number(response.data[0].lat),
-            longitude: Number(response.data[0].lon)
+            latitude: Number(location.lat),
+            longitude: Number(location.lon)
         };
+
     } catch (error) {
+
         console.error("Geocoding Error:", error.message);
 
         return {
