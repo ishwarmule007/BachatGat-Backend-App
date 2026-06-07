@@ -1,66 +1,55 @@
 const mongoose = require("mongoose");
 
-const installmentSchema = new mongoose.Schema({
-    loanId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Loan",
-        required: true
-    },
+const installmentSchema =
+    new mongoose.Schema({
 
-    installmentNumber: {
-        type: Number,
-        required: true
-    },
+        loanId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Loan",
+            required: true
+        },
 
-    amount: {
-        type: Number,
-        required: true
-    },
+        installmentNumber: {
+            type: Number,
+            required: true
+        },
 
-    dueDate: {
-        type: Date,
-        required: true
-    },
+        amount: {
+            type: Number,
+            required: true
+        },
 
-    paidDate: {
-        type: Date
-    },
+        dueDate: {
+            type: Date,
+            required: true
+        },
 
-    penaltyAmount: {
-        type: Number,
-        default: 0
-    },
+        paidDate: {
+            type: Date
+        },
 
-    status: {
-        type: String,
-        enum: [
-            "PENDING",
-            "PAID",
-            "OVERDUE"
-        ],
-        default: "PENDING"
-    },
+        penaltyAmount: {
+            type: Number,
+            default: 0
+        },
 
-    paymentRequestId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "PaymentRequest"
-    },
+        status: {
+            type: String,
+            enum: [
+                "PENDING",
+                "PAID",
+                "OVERDUE"
+            ],
+            default: "PENDING"
+        }
 
-    remarks: {
-        type: String,
-        default: ""
-    }
-}, {
-    timestamps: true
-});
-
-installmentSchema.index({
-    loanId: 1,
-    installmentNumber: 1
-}, {
-    unique: true
-});
+    }, {
+        timestamps: true
+    });
 
 module.exports =
     mongoose.models.Installment ||
-    mongoose.model("Installment", installmentSchema);
+    mongoose.model(
+        "Installment",
+        installmentSchema
+    );

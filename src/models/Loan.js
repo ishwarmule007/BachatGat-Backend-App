@@ -1,110 +1,126 @@
 const mongoose = require("mongoose");
 
-const loanSchema = new mongoose.Schema({
-    loanNumber: {
-        type: String,
-        unique: true,
-        required: true
-    },
+const loanSchema =
+    new mongoose.Schema({
 
-    groupId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Group",
-        required: true
-    },
+        loanNumber: {
+            type: String,
+            unique: true
+        },
 
-    memberId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
-    },
+        groupId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Group",
+            required: true
+        },
 
-    loanAmount: {
-        type: Number,
-        required: true,
-        min: 1
-    },
-    interestPercent: {
-        type: Number,
-        required: true,
-        min: 0
-    },
+        memberId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        },
 
-    interestAmount: {
-        type: Number,
-        required: true
-    },
+        loanRequestId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "LoanRequest"
+        },
 
-    totalAmount: {
-        type: Number,
-        required: true
-    },
+        loanAmount: {
+            type: Number,
+            required: true
+        },
 
-    months: {
-        type: Number,
-        required: true,
-        min: 1
-    },
+        repaymentType: {
+            type: String,
+            enum: [
+                "INSTALLMENT",
+                "INTEREST_ONLY"
+            ],
+            required: true
+        },
 
-    monthlyEMI: {
-        type: Number,
-        required: true
-    },
+        interestPercent: {
+            type: Number,
+            required: true
+        },
 
-    penaltyPerDay: {
-        type: Number,
-        default: 0
-    },
+        interestAmount: {
+            type: Number,
+            required: true
+        },
 
-    loanStartDate: {
-        type: Date,
-        required: true
-    },
+        totalAmount: {
+            type: Number,
+            required: true
+        },
 
-    loanEndDate: {
-        type: Date,
-        required: true
-    },
+        months: {
+            type: Number,
+            required: true
+        },
 
-    paidAmount: {
-        type: Number,
-        default: 0
-    },
+        monthlyEMI: {
+            type: Number,
+            required: true
+        },
 
-    remainingAmount: {
-        type: Number,
-        required: true
-    },
+        penaltyPerDay: {
+            type: Number,
+            default: 0
+        },
 
-    paidInstallments: {
-        type: Number,
-        default: 0
-    },
+        paidAmount: {
+            type: Number,
+            default: 0
+        },
 
-    remainingInstallments: {
-        type: Number,
-        required: true
-    },
+        remainingAmount: {
+            type: Number,
+            required: true
+        },
 
-    loanStatus: {
-        type: String,
-        enum: [
-            "ACTIVE",
-            "OVERDUE",
-            "PAID"
-        ],
-        default: "ACTIVE"
-    },
+        paidInstallments: {
+            type: Number,
+            default: 0
+        },
 
-    approvedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
-    }
-}, {
-    timestamps: true
-});
+        remainingInstallments: {
+            type: Number,
+            required: true
+        },
+
+        loanStartDate: {
+            type: Date,
+            required: true
+        },
+
+        loanEndDate: {
+            type: Date,
+            required: true
+        },
+
+        loanStatus: {
+            type: String,
+            enum: [
+                "ACTIVE",
+                "COMPLETED",
+                "OVERDUE"
+            ],
+            default: "ACTIVE"
+        },
+
+        approvedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }
+
+    }, {
+        timestamps: true
+    });
 
 module.exports =
     mongoose.models.Loan ||
-    mongoose.model("Loan", loanSchema);
+    mongoose.model(
+        "Loan",
+        loanSchema
+    );
