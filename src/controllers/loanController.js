@@ -4,9 +4,7 @@ const Group = require("../models/Group");
 const User = require("../models/User");
 const PaymentRequest = require("../models/PaymentRequest");
 const LoanRequest = require("../models/loanRequest");
-
-
-//new code
+const Notification = require("../models/notification");
 const requestLoan = async(
     req,
     res
@@ -60,7 +58,6 @@ const requestLoan = async(
                 message: "You are not a member"
             });
         }
-
         const request =
             await LoanRequest.create({
 
@@ -76,6 +73,30 @@ const requestLoan = async(
 
                 repaymentType
             });
+
+        const adminMember =
+            group.members.find(
+                m => m.role === "admin"
+            );
+
+        const user =
+            await User.findById(memberId);
+
+        if (adminMember) {
+
+            await Notification.create({
+
+                userId: adminMember.userId,
+
+                groupId,
+
+                title: "New Loan Request",
+
+                message: `${user.fullName} requested a loan of ₹${requestedAmount}`,
+
+                type: "loan_request_sent"
+            });
+        }
 
         return res.status(201).json({
             success: true,
@@ -298,6 +319,18 @@ const sendLoanProposal =
                 "PROPOSAL_SENT";
 
             await request.save();
+            await Notification.create({
+
+                userId: request.memberId,
+
+                groupId: request.groupId,
+
+                title: "Loan Proposal Received",
+
+                message: `Admin sent you a loan proposal of ₹${approvedAmount}`,
+
+                type: "loan_proposal_sent"
+            });
 
             return res.status(200).json({
                 success: true,
@@ -384,7 +417,19 @@ const rejectLoanProposalByAdmin =
                 rejectionReason || "";
 
             await request.save();
+            await Notification.create({
 
+                userId: request.memberId,
+
+                groupId: request.groupId,
+
+                title: "Loan Request Rejected",
+
+                message: rejectionReason ?
+                    `Your loan request was rejected. Reason: ${rejectionReason}` : "Your loan request was rejected",
+
+                type: "loan_proposal_rejected_by_admin"
+            });
             return res.status(200).json({
                 success: true,
                 message: "Loan request rejected successfully",
@@ -459,7 +504,23 @@ const acceptLoanProposal =
                 new Date();
 
             await request.save();
+            const group =
+                await Group.findById(
+                    request.groupId
+                );
 
+            await Notification.create({
+
+                userId: group.adminId,
+
+                groupId: request.groupId,
+
+                title: "Loan Proposal Accepted",
+
+                message: "Member accepted the loan proposal",
+
+                type: "loan_proposal_accepted_by_member"
+            });
             return res.status(200).json({
                 success: true,
                 message: "Loan proposal accepted successfully",
@@ -485,14 +546,14 @@ const rejectLoanProposalbyMember =
             const memberId =
                 req.user._id;
 
-            const {
-                loanRequestId,
-                rejectionReason
-            } = req.body;
+            const { loanRequestId } =
+            req.body;
 
             if (!loanRequestId) {
                 return res.status(400).json({
+
                     success: false,
+
                     message: "Loan request id is required"
                 });
             }
@@ -504,7 +565,9 @@ const rejectLoanProposalbyMember =
 
             if (!request) {
                 return res.status(404).json({
+
                     success: false,
+
                     message: "Loan request not found"
                 });
             }
@@ -514,7 +577,9 @@ const rejectLoanProposalbyMember =
                 memberId.toString()
             ) {
                 return res.status(403).json({
+
                     success: false,
+
                     message: "Unauthorized access"
                 });
             }
@@ -524,7 +589,9 @@ const rejectLoanProposalbyMember =
                 "PROPOSAL_SENT"
             ) {
                 return res.status(400).json({
+
                     success: false,
+
                     message: "Proposal not available"
                 });
             }
@@ -532,17 +599,35 @@ const rejectLoanProposalbyMember =
             request.requestStatus =
                 "REJECTED";
 
-            request.rejectionReason =
-                rejectionReason || "";
-
             request.memberResponseAt =
                 new Date();
 
             await request.save();
 
+            const group =
+                await Group.findById(
+                    request.groupId
+                );
+
+            await Notification.create({
+
+                userId: group.adminId,
+
+                groupId: request.groupId,
+
+                title: "Loan Proposal Rejected",
+
+                message: "Member rejected the loan proposal",
+
+                type: "loan_proposal_rejected_by_member"
+            });
+
             return res.status(200).json({
+
                 success: true,
+
                 message: "Loan proposal rejected successfully",
+
                 request
             });
 
@@ -551,7 +636,9 @@ const rejectLoanProposalbyMember =
             console.error(error);
 
             return res.status(500).json({
+
                 success: false,
+
                 message: error.message
             });
         }
@@ -809,7 +896,48 @@ const createLoan =
                 "FINALIZED";
 
             await request.save();
+            const borrower =
+                await User.findById(
+                    request.memberId
+                );
 
+            await Notification.create({
+
+                userId: request.memberId,
+
+                groupId: request.groupId,
+
+                title: "Loan Approved",
+
+                message: `Your loan of ₹${loan.loanAmount} has been approved and started`,
+
+                type: "loan_created"
+            });
+            const otherMembers =
+                group.members.filter(
+                    member =>
+                    member.status === "approved" &&
+                    member.userId.toString() !==
+                    request.memberId.toString()
+                );
+
+            const notifications =
+                otherMembers.map(member => ({
+
+                    userId: member.userId,
+
+                    groupId: request.groupId,
+
+                    title: "Loan Approved",
+
+                    message: `${borrower.fullName} received a loan of ₹${loan.loanAmount}`,
+
+                    type: "loan_approved_for_member"
+                }));
+
+            await Notification.insertMany(
+                notifications
+            );
             return res.status(201).json({
 
                 success: true,
