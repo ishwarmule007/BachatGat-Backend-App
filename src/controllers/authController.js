@@ -100,8 +100,6 @@ const sendOTP = async(req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-
-
 const getMyProfile = async(req, res) => {
     try {
         const user = await User.findById(req.user._id).select(
