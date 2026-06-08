@@ -61,6 +61,15 @@ const paymentRequestSchema = new mongoose.Schema({
     additionalComments: {
         type: String,
         default: ""
-    }
+    },
+    contributionAmount: {
+        type: Number,
+        default: 0
+    },
+
+    loanAmount: {
+        type: Number,
+        default: 0
+    },
 }, { timestamps: true });
 module.exports = mongoose.model("PaymentRequest", paymentRequestSchema);

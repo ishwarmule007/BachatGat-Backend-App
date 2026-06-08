@@ -9,165 +9,307 @@ const streamifier = require("streamifier");
 const Tesseract = require("tesseract.js");
 
 const createPaymentRequest = async(req, res) => {
+
     try {
         const {
             groupCode,
             month,
             upiId,
         } = req.body;
-
-        if (!groupCode || !month || !upiId) {
+        if (!groupCode ||
+            !month ||
+            !upiId
+        ) {
             return res.status(400).json({
+
+                success: false,
+
                 message: "groupCode, month and upiId are required",
             });
         }
-
         if (!req.file) {
             return res.status(400).json({
+
+                success: false,
+
                 message: "Screenshot is required",
             });
         }
+        const paymentMonth =
+            new Date(month);
+        if (
+            isNaN(paymentMonth.getTime())
+        ) {
+            return res.status(400).json({
 
-        const group = await Group.findOne({ groupCode });
+                success: false,
 
+                message: "Invalid month format",
+            });
+        }
+        const group =
+            await Group.findOne({
+                groupCode
+            });
         if (!group) {
             return res.status(404).json({
+
+                success: false,
+
                 message: "Group not found",
             });
         }
-
-        const member = group.members.find(
-            (m) =>
-            m.userId.toString() === req.user._id.toString() &&
-            m.status === "approved"
-        );
-
+        const member =
+            group.members.find(
+                (member) =>
+                member.userId.toString() ===
+                req.user._id.toString() &&
+                member.status ===
+                "approved"
+            );
         if (!member) {
             return res.status(403).json({
+
+                success: false,
+
                 message: "You are not an approved member of this group",
             });
         }
+        const existingContribution =
+            await Contribution.findOne({
 
-        const existingContribution = await Contribution.findOne({
-            userId: req.user._id,
-            groupId: group._id,
-            month,
-            status: "paid",
-        });
+                userId: req.user._id,
 
-        if (existingContribution) {
+                groupId: group._id,
+
+                month
+            });
+        if (
+            existingContribution &&
+            existingContribution.status ===
+            "paid"
+        ) {
             return res.status(400).json({
-                message: "Contribution already paid for this month",
+                success: false,
+                message: "Payment already completed for this month",
             });
         }
-
-        const existingPendingRequest = await PaymentRequest.findOne({
-            userId: req.user._id,
-            groupId: group._id,
-            month,
-            status: "pending",
-        });
-
+        const existingPendingRequest =
+            await PaymentRequest.findOne({
+                userId: req.user._id,
+                groupId: group._id,
+                month,
+                status: "pending",
+            });
         if (existingPendingRequest) {
             return res.status(400).json({
+                success: false,
                 message: "Payment request already pending for this month",
             });
         }
         // Compress image
-        const compressedImageBuffer = await sharp(req.file.buffer)
-            .resize({ width: 800 })
-            .jpeg({ quality: 60 })
-            .toBuffer();
+        const compressedImageBuffer =
+            await sharp(req.file.buffer)
 
+        .resize({
+            width: 800
+        })
+
+        .jpeg({
+            quality: 60
+        })
+
+        .toBuffer();
         // OCR
-        const ocrResult = await Tesseract.recognize(
-            compressedImageBuffer,
-            "eng"
-        );
-
-        const extractedText = ocrResult.data.text;
-        // Amount (₹1,050 or ₹ 1050)
-        const amountMatch = extractedText.match(
-            /₹\s*([\d,]+(?:\.\d+)?)/i
-        );
-
+        const ocrResult =
+            await Tesseract.recognize(
+                compressedImageBuffer,
+                "eng"
+            );
+        const extractedText =
+            ocrResult.data.text;
+        // Amount
+        const amountMatch =
+            extractedText.match(
+                /₹\s*([\d,]+(?:\.\d+)?)/i
+            );
         // Transaction ID
-        const transactionIdMatch = extractedText.match(
-            /Transaction\s*ID\s*([A-Z0-9]+)/i
-        );
-
+        const transactionIdMatch =
+            extractedText.match(
+                /Transaction\s*ID\s*([A-Z0-9]+)/i
+            );
         // UTR
-        const utrMatch = extractedText.match(
-            /UTR[:\s]*([A-Z0-9]+)/i
-        );
-
+        const utrMatch =
+            extractedText.match(
+                /UTR[:\s]*([A-Z0-9]+)/i
+            );
         // Paid To
-        const paidToMatch = extractedText.match(
-            /Paid\s*to\s*([\w\s]+)/i
-        );
-        //date
-        const dateMatch = extractedText.match(
-            /\d{1,2}\s+[A-Za-z]{3}\s+\d{4}/
-        );
-
+        const paidToMatch =
+            extractedText.match(
+                /Paid\s*to\s*([\w\s]+)/i
+            );
+        // Date
+        const dateMatch =
+            extractedText.match(
+                /\d{1,2}\s+[A-Za-z]{3}\s+\d{4}/
+            );
         const extractedInfo = {
             extractedAmount: amountMatch ?
-                Number(amountMatch[1].replace(/,/g, "")) : null,
-
+                Number(
+                    amountMatch[1]
+                    .replace(/,/g, "")
+                ) : null,
             transactionId: transactionIdMatch ?
                 transactionIdMatch[1] :
-                (utrMatch ? utrMatch[1] : null),
-
+                (
+                    utrMatch ?
+                    utrMatch[1] :
+                    null
+                ),
             paidTo: paidToMatch ?
                 paidToMatch[1].trim() : null,
-
             paidFrom: null,
-
             transactionDate: dateMatch ?
                 new Date(dateMatch[0]) : null,
         };
 
-        // Upload to cloudinary
-        const uploadFromBuffer = () => {
-            return new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream({
-                        folder: "payment_screenshots",
-                    },
-                    (error, result) => {
-                        if (error) reject(error);
-                        else resolve(result);
-                    }
-                );
-
-                streamifier
-                    .createReadStream(compressedImageBuffer)
-                    .pipe(uploadStream);
+        // Contribution amount
+        const contributionAmount =
+            Number(
+                (
+                    member.monthlyContributionAmount || 0
+                ).toFixed(2)
+            );
+        // Find unpaid installments
+        const unpaidInstallments =
+            await Installment.find({
+                memberId: req.user._id,
+                groupId: group._id,
+                status: {
+                    $ne: "PAID"
+                }
             });
+
+        // Current month installments
+        const currentMonthLoanInstallments =
+            unpaidInstallments.filter(
+                installment => {
+                    const dueDate =
+                        new Date(
+                            installment.dueDate
+                        );
+                    return (
+                        dueDate.getMonth() ===
+                        paymentMonth.getMonth()
+                    ) && (
+                        dueDate.getFullYear() ===
+                        paymentMonth.getFullYear()
+                    );
+                }
+            );
+        // Loan amount
+        const loanAmount =
+            Number(
+                currentMonthLoanInstallments
+                .reduce(
+                    (sum, installment) =>
+                    sum +
+                    installment.totalAmount,
+                    0
+                )
+                .toFixed(2)
+            );
+
+        // Total amount
+        const amount =
+            Number(
+                (
+                    contributionAmount +
+                    loanAmount
+                ).toFixed(2)
+            );
+
+        // OCR validation
+        if (
+
+            extractedInfo.extractedAmount &&
+
+            extractedInfo.extractedAmount <
+            amount
+
+        ) {
+            return res.status(400).json({
+
+                success: false,
+
+                message: `Uploaded payment screenshot amount is less than required amount ₹${amount}`
+            });
+        }
+
+        // Upload image to cloudinary
+        const uploadFromBuffer = () => {
+            return new Promise(
+                (resolve, reject) => {
+                    const uploadStream =
+                        cloudinary.uploader.upload_stream({
+                                folder: "payment_screenshots",
+                            },
+                            (
+                                error,
+                                result
+                            ) => {
+
+                                if (error)
+                                    reject(error);
+
+                                else
+                                    resolve(result);
+                            }
+                        );
+
+                    streamifier
+                        .createReadStream(
+                            compressedImageBuffer
+                        )
+                        .pipe(uploadStream);
+                }
+            );
         };
 
-        const uploadedImage = await uploadFromBuffer();
-        const amount = member.monthlyContributionAmount || 0;
+        const uploadedImage =
+            await uploadFromBuffer();
+        // Create payment request
+        const paymentRequest =
+            await PaymentRequest.create({
+                userId: req.user._id,
+                groupId: group._id,
+                adminId: group.adminId,
+                contributionAmount,
+                loanAmount,
+                amount,
+                installmentIds: currentMonthLoanInstallments
+                    .map(
+                        installment =>
+                        installment._id
+                    ),
 
-        const paymentRequest = await PaymentRequest.create({
-            userId: req.user._id,
-            groupId: group._id,
-            adminId: group.adminId,
-            amount,
-            month,
-            upiId,
-            screenshotUrl: uploadedImage.secure_url,
-            extractedInfo,
-            status: "pending",
-        });
+                month,
+                upiId,
+                screenshotUrl: uploadedImage.secure_url,
+                extractedInfo,
+                status: "pending",
+            });
 
+        // Admin notification
         await createNotification({
             userId: group.adminId,
             groupId: group._id,
             title: "Payment request received",
-            message: `${req.user.fullName} has sent payment request of ₹${amount}`,
+            message: `${req.user.fullName} sent payment request. Contribution: ₹${contributionAmount}, Loan: ₹${loanAmount}, Total: ₹${amount}`,
             type: "payment_request_received",
         });
 
+        // Member notification
         await createNotification({
             userId: req.user._id,
             groupId: group._id,
@@ -176,13 +318,22 @@ const createPaymentRequest = async(req, res) => {
             type: "payment_request_sent",
         });
 
-        res.status(201).json({
+        return res.status(201).json({
+            success: true,
             message: "Payment request submitted successfully",
+            paymentBreakdown: {
+                contributionAmount,
+                loanAmount,
+                totalAmount: amount,
+                hasLoanPayment: loanAmount > 0
+            },
             paymentRequest,
         });
 
     } catch (error) {
-        res.status(500).json({
+        console.error(error);
+        return res.status(500).json({
+            success: false,
             message: error.message,
         });
     }
