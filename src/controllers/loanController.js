@@ -1211,10 +1211,15 @@ const getLoanRepaymentSchedule =
                                 interest
                             ).toFixed(2)
                         );
+                    const dueDate = new Date(startDate);
+
+                    dueDate.setMonth(startDate.getMonth() + i);
+
+                    dueDate.setDate(0);
 
                     schedule.push({
 
-                        month: i,
+                        dueDate,
 
                         principal: principalPerMonth,
 
@@ -1249,14 +1254,18 @@ const getLoanRepaymentSchedule =
                         principal =
                             loanAmount;
                     }
+                    const dueDate = new Date(startDate);
 
+                    dueDate.setMonth(startDate.getMonth() + i);
+
+                    dueDate.setDate(0);
                     const total =
                         principal +
                         monthlyInterest;
 
                     schedule.push({
 
-                        month: i,
+                        dueDate,
 
                         principal,
 
