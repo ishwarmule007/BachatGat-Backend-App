@@ -1028,7 +1028,7 @@ router.get(
 router.get(
     "/member/:groupId",
     authMiddleware,
-    getMemberPaymentPage
+    generateContributionPaymentLink
 );
 
 /**
