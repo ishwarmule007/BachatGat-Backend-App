@@ -9,7 +9,6 @@ const streamifier = require("streamifier");
 const Tesseract = require("tesseract.js");
 
 const createPaymentRequest = async(req, res) => {
-
     try {
         const {
             groupCode,
@@ -21,29 +20,24 @@ const createPaymentRequest = async(req, res) => {
             !upiId
         ) {
             return res.status(400).json({
-
                 success: false,
-
                 message: "groupCode, month and upiId are required",
             });
         }
         if (!req.file) {
             return res.status(400).json({
-
                 success: false,
-
                 message: "Screenshot is required",
             });
         }
+
         const paymentMonth =
             new Date(month);
         if (
             isNaN(paymentMonth.getTime())
         ) {
             return res.status(400).json({
-
                 success: false,
-
                 message: "Invalid month format",
             });
         }
@@ -53,9 +47,7 @@ const createPaymentRequest = async(req, res) => {
             });
         if (!group) {
             return res.status(404).json({
-
                 success: false,
-
                 message: "Group not found",
             });
         }
@@ -69,19 +61,14 @@ const createPaymentRequest = async(req, res) => {
             );
         if (!member) {
             return res.status(403).json({
-
                 success: false,
-
                 message: "You are not an approved member of this group",
             });
         }
         const existingContribution =
             await Contribution.findOne({
-
                 userId: req.user._id,
-
                 groupId: group._id,
-
                 month
             });
         if (
@@ -94,6 +81,7 @@ const createPaymentRequest = async(req, res) => {
                 message: "Payment already completed for this month",
             });
         }
+
         const existingPendingRequest =
             await PaymentRequest.findOne({
                 userId: req.user._id,
@@ -101,13 +89,13 @@ const createPaymentRequest = async(req, res) => {
                 month,
                 status: "pending",
             });
+
         if (existingPendingRequest) {
             return res.status(400).json({
                 success: false,
                 message: "Payment request already pending for this month",
             });
         }
-        // Compress image
         const compressedImageBuffer =
             await sharp(req.file.buffer)
 
@@ -120,35 +108,33 @@ const createPaymentRequest = async(req, res) => {
         })
 
         .toBuffer();
-        // OCR
         const ocrResult =
             await Tesseract.recognize(
+
                 compressedImageBuffer,
+
                 "eng"
             );
+
         const extractedText =
             ocrResult.data.text;
-        // Amount
+
         const amountMatch =
             extractedText.match(
                 /₹\s*([\d,]+(?:\.\d+)?)/i
             );
-        // Transaction ID
         const transactionIdMatch =
             extractedText.match(
                 /Transaction\s*ID\s*([A-Z0-9]+)/i
             );
-        // UTR
         const utrMatch =
             extractedText.match(
                 /UTR[:\s]*([A-Z0-9]+)/i
             );
-        // Paid To
         const paidToMatch =
             extractedText.match(
                 /Paid\s*to\s*([\w\s]+)/i
             );
-        // Date
         const dateMatch =
             extractedText.match(
                 /\d{1,2}\s+[A-Za-z]{3}\s+\d{4}/
@@ -172,15 +158,25 @@ const createPaymentRequest = async(req, res) => {
             transactionDate: dateMatch ?
                 new Date(dateMatch[0]) : null,
         };
-
-        // Contribution amount
         const contributionAmount =
             Number(
                 (
                     member.monthlyContributionAmount || 0
                 ).toFixed(2)
             );
-        // Find unpaid installments
+        const monthEndDate =
+            new Date(
+
+                paymentMonth.getFullYear(),
+
+                paymentMonth.getMonth() + 1,
+
+                0,
+
+                23,
+                59,
+                59
+            );
         const unpaidInstallments =
             await Installment.find({
                 memberId: req.user._id,
@@ -189,8 +185,6 @@ const createPaymentRequest = async(req, res) => {
                     $ne: "PAID"
                 }
             });
-
-        // Current month installments
         const currentMonthLoanInstallments =
             unpaidInstallments.filter(
                 installment => {
@@ -199,19 +193,16 @@ const createPaymentRequest = async(req, res) => {
                             installment.dueDate
                         );
                     return (
-                        dueDate.getMonth() ===
-                        paymentMonth.getMonth()
-                    ) && (
-                        dueDate.getFullYear() ===
-                        paymentMonth.getFullYear()
+                        dueDate <=
+                        monthEndDate
                     );
                 }
             );
-        // Loan amount
         const loanAmount =
             Number(
                 currentMonthLoanInstallments
                 .reduce(
+
                     (sum, installment) =>
                     sum +
                     installment.totalAmount,
@@ -219,8 +210,6 @@ const createPaymentRequest = async(req, res) => {
                 )
                 .toFixed(2)
             );
-
-        // Total amount
         const amount =
             Number(
                 (
@@ -228,28 +217,21 @@ const createPaymentRequest = async(req, res) => {
                     loanAmount
                 ).toFixed(2)
             );
-
-        // OCR validation
         if (
-
             extractedInfo.extractedAmount &&
-
             extractedInfo.extractedAmount <
             amount
-
         ) {
             return res.status(400).json({
-
                 success: false,
-
                 message: `Uploaded payment screenshot amount is less than required amount ₹${amount}`
             });
         }
-
-        // Upload image to cloudinary
         const uploadFromBuffer = () => {
+
             return new Promise(
                 (resolve, reject) => {
+
                     const uploadStream =
                         cloudinary.uploader.upload_stream({
                                 folder: "payment_screenshots",
@@ -266,7 +248,6 @@ const createPaymentRequest = async(req, res) => {
                                     resolve(result);
                             }
                         );
-
                     streamifier
                         .createReadStream(
                             compressedImageBuffer
@@ -278,7 +259,6 @@ const createPaymentRequest = async(req, res) => {
 
         const uploadedImage =
             await uploadFromBuffer();
-        // Create payment request
         const paymentRequest =
             await PaymentRequest.create({
                 userId: req.user._id,
@@ -292,15 +272,12 @@ const createPaymentRequest = async(req, res) => {
                         installment =>
                         installment._id
                     ),
-
                 month,
                 upiId,
                 screenshotUrl: uploadedImage.secure_url,
                 extractedInfo,
                 status: "pending",
             });
-
-        // Admin notification
         await createNotification({
             userId: group.adminId,
             groupId: group._id,
@@ -308,8 +285,6 @@ const createPaymentRequest = async(req, res) => {
             message: `${req.user.fullName} sent payment request. Contribution: ₹${contributionAmount}, Loan: ₹${loanAmount}, Total: ₹${amount}`,
             type: "payment_request_received",
         });
-
-        // Member notification
         await createNotification({
             userId: req.user._id,
             groupId: group._id,
@@ -317,7 +292,6 @@ const createPaymentRequest = async(req, res) => {
             message: `Your payment request of ₹${amount} has been sent`,
             type: "payment_request_sent",
         });
-
         return res.status(201).json({
             success: true,
             message: "Payment request submitted successfully",
@@ -329,7 +303,6 @@ const createPaymentRequest = async(req, res) => {
             },
             paymentRequest,
         });
-
     } catch (error) {
         console.error(error);
         return res.status(500).json({
@@ -338,552 +311,899 @@ const createPaymentRequest = async(req, res) => {
         });
     }
 };
-const updatePaymentRequestStatus = async(req, res) => {
-    try {
-        const { paymentRequestId, status, rejectionReason } = req.body;
-
-        if (!paymentRequestId || !status) {
-            return res.status(400).json({
-                message: "paymentRequestId and status are required",
-            });
-        }
-
-        if (!["accepted", "rejected"].includes(status)) {
-            return res.status(400).json({
-                message: "Status must be accepted or rejected",
-            });
-        }
-
-        if (status === "rejected" && !rejectionReason) {
-            return res.status(400).json({
-                message: "rejectionReason is required when rejecting payment",
-            });
-        }
-
-        const paymentRequest = await PaymentRequest.findById(paymentRequestId)
-            .populate("userId", "fullName mobileNumber")
-            .populate("groupId", "groupName groupCode");
-
-        if (!paymentRequest) {
-            return res.status(404).json({
-                message: "Payment request not found",
-            });
-        }
-
-        if (paymentRequest.adminId.toString() !== req.user._id.toString()) {
-            return res.status(403).json({
-                message: "You are not allowed to manage this payment request",
-            });
-        }
-
-        if (paymentRequest.status !== "pending") {
-            return res.status(400).json({
-                message: "Payment request is already processed",
-            });
-        }
-
-        paymentRequest.status = status;
-
-        if (status === "accepted") {
-            paymentRequest.acceptedAt = new Date();
-
-            const existingContribution = await Contribution.findOne({
-                userId: paymentRequest.userId._id,
-                groupId: paymentRequest.groupId._id,
-                month: paymentRequest.month,
-            });
-
-            if (existingContribution) {
+const updatePaymentRequestStatus =
+    async(req, res) => {
+        try {
+            const {
+                paymentRequestId,
+                status,
+                rejectionReason
+            } = req.body;
+            if (!paymentRequestId ||
+                !status
+            ) {
                 return res.status(400).json({
-                    message: "Contribution already exists for this month",
+
+                    success: false,
+
+                    message: "paymentRequestId and status are required",
+                });
+            }
+            if (![
+                    "accepted",
+                    "rejected"
+                ].includes(status)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Status must be accepted or rejected",
+                });
+            }
+            if (
+                status === "rejected" &&
+                !rejectionReason
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "rejectionReason is required when rejecting payment",
                 });
             }
 
-            await Contribution.create({
-                userId: paymentRequest.userId._id,
-                groupId: paymentRequest.groupId._id,
-                amount: paymentRequest.amount,
-                month: paymentRequest.month,
-                status: "paid",
-                paymentRequestId: paymentRequest._id,
-            });
+            const paymentRequest =
+                await PaymentRequest.findById(
+                    paymentRequestId
+                )
+                .populate(
+                    "userId",
+                    `
+                    fullName
+                    mobileNumber
+                    `
+                )
+                .populate(
+                    "groupId",
+                    `
+                    groupName
+                    groupCode
+                    `
+                )
+                .populate(
+                    "installmentIds"
+                );
 
-            await createNotification({
-                userId: paymentRequest.userId._id,
-                groupId: paymentRequest.groupId._id,
-                title: "Payment accepted",
-                message: `Your payment of ₹${paymentRequest.amount} for ${paymentRequest.month} has been accepted`,
-                type: "payment_accepted",
-            });
-        }
-
-        if (status === "rejected") {
-            paymentRequest.rejectedAt = new Date();
-            paymentRequest.rejectionReason = rejectionReason;
-
-            await createNotification({
-                userId: paymentRequest.userId._id,
-                groupId: paymentRequest.groupId._id,
-                title: "Payment rejected",
-                message: `Your payment request of ₹${paymentRequest.amount} for ${paymentRequest.month} has been rejected. Reason: ${rejectionReason}`,
-                type: "payment_rejected",
-            });
-        }
-
-        await paymentRequest.save();
-
-        res.status(200).json({
-            message: `Payment request ${status} successfully`,
-            paymentRequest,
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: error.message,
-        });
-    }
-};
-const getMemberPaymentPage = async(req, res) => {
-        try {
-            const userId = req.user._id;
-            const { groupCode } = req.params;
-
-            const group = await Group.findOne({ groupCode }).populate(
-                "adminId",
-                "fullName mobileNumber upiId bankAccountDetails"
-            );
-
-            if (!group) {
-                return res.status(404).json({ message: "Group not found" });
+            if (!paymentRequest) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Payment request not found",
+                });
             }
 
-            const member = group.members.find(
-                (m) => m.userId.toString() === userId.toString()
-            );
+            if (
+                paymentRequest.adminId.toString() !==
+                req.user._id.toString()
+            ) {
+                return res.status(403).json({
+                    success: false,
+                    message: "You are not allowed to manage this payment request",
+                });
+            }
 
+            if (
+                paymentRequest.status !==
+                "pending"
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Payment request is already processed",
+                });
+            }
+
+            paymentRequest.status =
+                status;
+            if (status === "accepted") {
+                paymentRequest.acceptedAt =
+                    new Date();
+                const existingContribution =
+                    await Contribution.findOne({
+
+                        userId: paymentRequest.userId._id,
+
+                        groupId: paymentRequest.groupId._id,
+
+                        month: paymentRequest.month,
+                    });
+
+                if (existingContribution) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Contribution already exists for this month",
+                    });
+                }
+                await Contribution.create({
+
+                    userId: paymentRequest.userId._id,
+                    groupId: paymentRequest.groupId._id,
+                    contributionAmount: paymentRequest.contributionAmount || 0,
+
+                    loanAmount: paymentRequest.loanAmount || 0,
+                    amount: paymentRequest.amount,
+
+                    month: paymentRequest.month,
+                    status: "paid",
+                    paymentRequestId: paymentRequest._id,
+                });
+                if (
+                    paymentRequest.installmentIds &&
+                    paymentRequest.installmentIds.length > 0
+                ) {
+                    await Installment.updateMany({
+                        _id: {
+                            $in: paymentRequest.installmentIds.map(
+                                installment =>
+                                installment._id
+                            )
+                        }
+
+                    }, {
+
+                        $set: {
+
+                            status: "PAID",
+                            paidAt: new Date()
+                        }
+                    });
+                }
+                await createNotification({
+                    userId: paymentRequest.userId._id,
+                    groupId: paymentRequest.groupId._id,
+                    title: "Payment accepted",
+                    message: `Your payment of ₹${paymentRequest.amount} for ${paymentRequest.month} has been accepted`,
+                    type: "payment_accepted",
+                });
+            }
+            if (status === "rejected") {
+                paymentRequest.rejectedAt =
+                    new Date();
+                paymentRequest.rejectionReason =
+                    rejectionReason;
+                await createNotification({
+                    userId: paymentRequest.userId._id,
+                    groupId: paymentRequest.groupId._id,
+                    title: "Payment rejected",
+                    message: `Your payment request of ₹${paymentRequest.amount} for ${paymentRequest.month} has been rejected. Reason: ${rejectionReason}`,
+                    type: "payment_rejected",
+                });
+            }
+            await paymentRequest.save();
+            return res.status(200).json({
+                success: true,
+                message: `Payment request ${status} successfully`,
+                paymentRequest,
+            });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    };
+const getMemberPaymentHistory =
+    async(req, res) => {
+
+        try {
+            const userId =
+                req.user._id;
+            const payments =
+                await PaymentRequest.find({
+                    userId
+
+                })
+                .populate(
+                    "groupId",
+                    `
+                    groupName
+                    groupCode
+                `
+                )
+                .populate(
+                    "installmentIds"
+                )
+
+            .sort({
+                createdAt: -1
+            });
+
+            const formattedPayments =
+                payments.map(payment => ({
+
+                    paymentRequestId: payment._id,
+                    group: {
+                        groupId: payment.groupId ? payment.groupId._id || null : null,
+
+                        groupName: payment.groupId ? payment.groupId.groupName || "" : "",
+
+                        groupCode: payment.groupId ? payment.groupId.groupCode || "" : "",
+                    },
+
+                    contributionAmount: payment.contributionAmount || 0,
+                    loanAmount: payment.loanAmount || 0,
+                    totalAmount: payment.amount || 0,
+                    installmentCount: payment.installmentIds ? payment.installmentIds.length || 0 : 0,
+                    installments: payment.installmentIds || [],
+                    month: payment.month,
+                    upiId: payment.upiId,
+                    screenshotUrl: payment.screenshotUrl,
+
+                    extractedInfo: payment.extractedInfo,
+                    status: payment.status,
+
+                    rejectionReason: payment.rejectionReason || "",
+                    acceptedAt: payment.acceptedAt || null,
+                    rejectedAt: payment.rejectedAt || null,
+
+                    resubmittedAt: payment.resubmittedAt || null,
+                    resubmissionCount: payment.resubmissionCount || 0,
+                    createdAt: payment.createdAt,
+                    updatedAt: payment.updatedAt,
+                }));
+
+            return res.status(200).json({
+
+                success: true,
+                message: "Payment history fetched successfully",
+
+                counts: {
+
+                    total: formattedPayments.length,
+                    accepted: formattedPayments.filter(
+                        payment =>
+                        payment.status === "accepted"
+                    ).length,
+                    pending: formattedPayments.filter(
+                        payment =>
+                        payment.status === "pending"
+                    ).length,
+                    rejected: formattedPayments.filter(
+                        payment =>
+                        payment.status === "rejected"
+                    ).length,
+                },
+
+                payments: formattedPayments,
+            });
+
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    };
+const getAdminPaymentRequests =
+    async(req, res) => {
+
+        try {
+            const adminId =
+                req.user._id;
+
+            const requests =
+                await PaymentRequest.find({
+
+                    adminId
+                })
+                .populate(
+                    "userId",
+                    `
+                    fullName
+                    mobileNumber
+                    profilePicture
+                    `
+                )
+                .populate(
+                    "groupId",
+                    `
+                    groupName
+                    groupCode
+                    `
+                )
+
+            .populate(
+                    "installmentIds",
+                    `
+                    installmentNumber
+                    dueDate
+                    principalAmount
+                    interestAmount
+                    totalAmount
+                    status
+                    `
+                )
+                .sort({
+                    createdAt: -1
+                });
+
+            const formattedRequests =
+                requests.map(
+                    (request) => ({
+
+                        requestId: request._id,
+                        memberId: request.userId ? request.userId._id || null : null,
+                        memberName: request.userId ? request.userId.fullName ||
+                            "Unknown Member" : "Unknown Member",
+                        mobileNumber: request.userId ? request.userId.mobileNumber || "" : "",
+                        profilePicture: request.userId ? request.userId.profilePicture || "" : "",
+                        groupId: request.groupId ? request.groupId._id || null : null,
+                        groupName: request.groupId ? request.groupId.groupName || "" : "",
+                        groupCode: request.groupId ? request.groupId.groupCode || "" : "",
+                        contributionAmount: request.contributionAmount || 0,
+                        loanAmount: request.loanAmount || 0,
+                        totalAmount: request.amount || 0,
+                        installmentCount: request.installmentIds ? request.installmentIds.length || 0 : 0,
+                        installments: request.installmentIds || [],
+                        month: request.month,
+                        upiId: request.upiId,
+                        screenshotUrl: request.screenshotUrl,
+                        extractedInfo: request.extractedInfo,
+                        status: request.status,
+                        rejectionReason: request.rejectionReason || "",
+                        acceptedAt: request.acceptedAt || null,
+                        rejectedAt: request.rejectedAt || null,
+                        // Timestamps
+                        createdAt: request.createdAt,
+                        updatedAt: request.updatedAt,
+                    })
+                );
+
+            const pending =
+                formattedRequests.filter(
+                    (request) =>
+                    request.status ===
+                    "pending"
+                );
+
+            const accepted =
+                formattedRequests.filter(
+                    (request) =>
+                    request.status ===
+                    "accepted"
+                );
+
+            const rejected =
+                formattedRequests.filter(
+                    (request) =>
+                    request.status ===
+                    "rejected"
+                );
+
+            return res.status(200).json({
+
+                success: true,
+
+                message: "Payment requests fetched successfully",
+
+                counts: {
+
+                    all: formattedRequests.length,
+                    pending: pending.length,
+                    accepted: accepted.length,
+                    rejected: rejected.length,
+                },
+                requests: formattedRequests,
+            });
+
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    };
+const getPaymentRequestDetail =
+    async(req, res) => {
+        try {
+            const adminId =
+                req.user._id;
+
+            const { requestId } =
+            req.params;
+            const request =
+                await PaymentRequest.findOne({
+
+                    _id: requestId,
+
+                    adminId
+                })
+                .populate(
+                    "userId",
+                    `
+                    fullName
+                    mobileNumber
+                    profilePicture
+                    `
+                )
+                .populate(
+                    "groupId",
+                    `
+                    groupName
+                    groupCode
+                    `
+                )
+                .populate(
+                    "installmentIds",
+                    `
+                    installmentNumber
+                    dueDate
+                    principalAmount
+                    interestAmount
+                    totalAmount
+                    status
+                    paidAt
+                    `
+                );
+
+            if (!request) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Payment request not found",
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Payment request detail fetched successfully",
+                request: {
+                    requestId: request._id,
+                    member: {
+                        memberId: request.userId ?
+                            request.userId._id : null,
+                        fullName: request.userId ?
+                            request.userId.fullName : "Unknown Member",
+                        mobileNumber: request.userId ?
+                            request.userId.mobileNumber : "",
+                        profilePicture: request.userId ?
+                            request.userId.profilePicture : "",
+                    },
+
+                    group: {
+                        groupId: request.groupId ?
+                            request.groupId._id : null,
+                        groupName: request.groupId ?
+                            request.groupId.groupName : "",
+                        groupCode: request.groupId ?
+                            request.groupId.groupCode : "",
+                    },
+
+                    paymentBreakdown: {
+                        contributionAmount: request.contributionAmount || 0,
+                        loanAmount: request.loanAmount || 0,
+                        totalAmount: request.amount || 0,
+                        installmentCount: request.installmentIds ?
+                            request.installmentIds.length || 0 : 0,
+                        hasLoanPayment: request.loanAmount > 0
+                    },
+                    installments: request.installmentIds || [],
+                    paymentDetails: {
+                        month: request.month,
+                        upiId: request.upiId,
+                        screenshotUrl: request.screenshotUrl,
+                        extractedInfo: request.extractedInfo,
+                    },
+                    status: request.status,
+                    rejectionReason: request.rejectionReason || "",
+                    acceptedAt: request.acceptedAt || null,
+                    rejectedAt: request.rejectedAt || null,
+                    createdAt: request.createdAt,
+                    updatedAt: request.updatedAt,
+                },
+            });
+
+        } catch (error) {
+
+            console.error(error);
+
+            return res.status(500).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    };
+
+const generateContributionPaymentLink =
+    async(req, res) => {
+        try {
+            const userId =
+                req.user._id;
+
+            const { groupId } =
+            req.params;
+            const group =
+                await Group.findById(groupId)
+                .populate(
+                    "adminId",
+                    `
+                    fullName
+                    upiId
+                    bankAccountDetails
+                    `
+                );
+            if (!group) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Group not found",
+                });
+            }
+            const member =
+                group.members.find(
+                    (member) =>
+                    member.userId.toString() ===
+                    userId.toString()
+                );
             if (!member) {
                 return res.status(403).json({
+
+                    success: false,
                     message: "You are not a member of this group",
                 });
             }
+            const now =
+                new Date();
 
-            if (member.status !== "approved") {
-                return res.status(403).json({
-                    message: "Your group membership is not approved yet",
+            const month =
+                `${now.getFullYear()}-${String(
+                    now.getMonth() + 1
+                ).padStart(2, "0")}`;
+            const existingContribution =
+                await Contribution.findOne({
+                    userId,
+                    groupId,
+                    month,
+                    status: "paid"
+                });
+            if (existingContribution) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Payment already completed for this month"
                 });
             }
+            const contributionAmount =
+                Number(
+                    (
+                        member.monthlyContributionAmount || 0
+                    ).toFixed(2)
+                );
+            const monthEndDate =
+                new Date(
 
-            const amount = member.monthlyContribution || 0;
+                    now.getFullYear(),
+                    now.getMonth() + 1,
+                    0,
+                    23,
+                    59,
+                    59
+                );
+            const unpaidInstallments =
+                await Installment.find({
+                    memberId: userId,
+                    groupId: group._id,
+                    status: {
+                        $ne: "PAID"
+                    }
+                });
+            const dueInstallments =
+                unpaidInstallments.filter(
+                    installment => {
+                        const dueDate =
+                            new Date(
+                                installment.dueDate
+                            );
+                        return (
+                            dueDate <=
+                            monthEndDate
+                        );
+                    }
+                );
+            const loanAmount =
+                Number(
+                    dueInstallments.reduce(
 
+                        (sum, installment) =>
+
+                        sum +
+                        installment.totalAmount,
+
+                        0
+                    ).toFixed(2)
+                );
+            const amount =
+                Number(
+                    (
+                        contributionAmount +
+                        loanAmount
+                    ).toFixed(2)
+                );
             if (!group.adminId.upiId) {
                 return res.status(400).json({
-                    message: "Admin has not added UPI ID yet",
+                    success: false,
+                    message: "Admin UPI ID not found",
+                });
+            }
+            const transactionNote =
+                `${group.groupName} Contribution ${month}`;
+
+            const upiDeepLink =
+
+                `upi://pay?pa=${encodeURIComponent(group.adminId.upiId)}` +
+
+                `&pn=${encodeURIComponent(group.adminId.fullName)}` +
+
+                `&am=${amount}` +
+
+                `&cu=INR` +
+
+                `&tn=${encodeURIComponent(transactionNote)}`;
+
+            return res.status(200).json({
+
+                success: true,
+
+                message: "Payment page data fetched successfully",
+
+                group: {
+
+                    groupId: group._id,
+
+                    groupName: group.groupName,
+                },
+
+                amountDetails: {
+                    contributionAmount,
+                    loanAmount,
+                    totalAmount: amount,
+                    month,
+                    hasLoanPayment: loanAmount > 0,
+                    installmentCount: dueInstallments.length
+                },
+
+                loanInstallments: dueInstallments.map(
+                    installment => ({
+
+                        installmentId: installment._id,
+                        installmentNumber: installment.installmentNumber,
+                        dueDate: installment.dueDate,
+                        principalAmount: installment.principalAmount,
+                        interestAmount: installment.interestAmount,
+                        totalAmount: installment.totalAmount
+                    })
+                ),
+
+                ownerAccount: {
+                    adminId: group.adminId._id,
+                    adminName: group.adminId.fullName,
+                    upiId: group.adminId.upiId,
+                    bankAccountDetails: {
+                        bankAccountDetails: {
+                            accountHolderName: group.adminId
+                                .bankAccountDetails ?
+                                group.adminId.bankAccountDetails.accountHolderName || "" : "",
+                            bankName: group.adminId
+                                .bankAccountDetails ?
+                                group.adminId.bankAccountDetails.bankName || "" : "",
+                            accountNumber: group.adminId
+                                .bankAccountDetails ?
+                                group.adminId.bankAccountDetails.accountNumber || "" : "",
+                            ifscCode: group.adminId
+                                .bankAccountDetails ?
+                                group.adminId.bankAccountDetails.ifscCode || "" : "",
+                        },
+                    },
+                },
+                paymentDetails: {
+                    upiDeepLink,
+                },
+            });
+
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    };
+
+const resubmitPaymentRequest =
+    async(req, res) => {
+        try {
+            const {
+                paymentRequestId
+            } = req.params;
+            const {
+                additionalComments
+            } = req.body;
+            const screenshotUrl =
+                req.file ? req.file.path : null;
+            if (!screenshotUrl) {
+
+                return res.status(400).json({
+                    success: false,
+                    message: "Screenshot is required"
                 });
             }
 
-            const upiLink = `upi://pay?pa=${group.adminId.upiId}&pn=${encodeURIComponent(
-            group.adminId.fullName
-        )}&am=${amount}&cu=INR&tn=${encodeURIComponent(
-            `Monthly contribution for ${group.groupName}`
-        )}`;
-
-        res.status(200).json({
-            success: true,
-            message: "Member payment page fetched successfully",
-            paymentPage: {
-                group: {
-                    groupId: group._id,
-                    groupName: group.groupName,
-                    groupCode: group.groupCode,
-                },
-                amount,
-                ownerAccount: {
-                    adminName: group.adminId.fullName,
-                    mobileNumber: group.adminId.mobileNumber,
-                    upiId: group.adminId.upiId,
-                    bankAccountDetails: group.adminId.bankAccountDetails,
-                },
-                upiLink,
-            },
-        });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-const getMemberPaymentHistory = async (req, res) => {
-     try {
-        const userId = req.user._id;
-
-        const payments = await PaymentRequest.find({ userId })
-            .populate("groupId", "groupName groupCode")
-            .sort({ createdAt: -1 });
-
-        res.status(200).json({
-            success: true,
-            message: "Payment history fetched successfully",
-            payments,
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: error.message,
-        });
-    }
-};
-const getAdminPaymentRequests = async (req, res) => {
-  try {
-    const adminId = req.user._id;
-
-    const requests = await PaymentRequest.find({ adminId })
-      .populate("userId", "fullName mobileNumber profilePicture")
-      .populate("groupId", "groupName groupCode")
-      .sort({ createdAt: -1 });
-
-    const formattedRequests = requests.map((request) => ({
-      requestId: request._id,
-
-      memberId: request.userId?._id,
-      memberName: request.userId?.fullName || "Unknown Member",
-      mobileNumber: request.userId?.mobileNumber || "",
-      profilePicture: request.userId?.profilePicture || "",
-
-      groupId: request.groupId?._id,
-      groupName: request.groupId?.groupName || "",
-      groupCode: request.groupId?.groupCode || "",
-
-      amount: request.amount,
-      month: request.month,
-      upiId: request.upiId,
-      screenshotUrl: request.screenshotUrl,
-      extractedInfo: request.extractedInfo,
-
-      status: request.status,
-
-      rejectionReason: request.rejectionReason || "",
-
-      acceptedAt: request.acceptedAt || null,
-      rejectedAt: request.rejectedAt || null,
-
-      createdAt: request.createdAt,
-      updatedAt: request.updatedAt,
-    }));
-
-    const pending = formattedRequests.filter(
-      (r) => r.status === "pending"
-    );
-
-    const accepted = formattedRequests.filter(
-      (r) => r.status === "accepted"
-    );
-
-    const rejected = formattedRequests.filter(
-      (r) => r.status === "rejected"
-    );
-
-    res.status(200).json({
-      message: "Payment requests fetched successfully",
-
-      counts: {
-        all: formattedRequests.length,
-        pending: pending.length,
-        accepted: accepted.length,
-        rejected: rejected.length,
-      },
-
-      requests: formattedRequests,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
-  }
-};
-const getPaymentRequestDetail = async (req, res) => {
-  try {
-    const adminId = req.user._id;
-    const { requestId } = req.params;
-
-    const request = await PaymentRequest.findOne({
-      _id: requestId,
-      adminId,
-    })
-      .populate("userId", "fullName mobileNumber profilePicture")
-      .populate("groupId", "groupName groupCode");
-
-    if (!request) {
-      return res.status(404).json({
-        message: "Payment request not found",
-      });
-    }
-
-    res.status(200).json({
-      message: "Payment request detail fetched successfully",
-      request: {
-        ...request.toObject(),
-
-        status: request.status,
-        rejectionReason: request.rejectionReason || "",
-        acceptedAt: request.acceptedAt,
-        rejectedAt: request.rejectedAt,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
-  }
-};
-
-const generateContributionPaymentLink = async (req, res) => {
-  try {
-    const userId = req.user._id;
-
-    const { groupId } = req.params;
-
-    const group = await Group.findById(groupId).populate(
-      "adminId",
-      "fullName upiId"
-    );
-
-    if (!group) {
-      return res.status(404).json({
-        message: "Group not found",
-      });
-    }
-
-    const member = group.members.find(
-      (m) => m.userId.toString() === userId.toString()
-    );
-
-    if (!member) {
-      return res.status(403).json({
-        message: "You are not a member of this group",
-      });
-    }
-
-    const amount =
-      member.monthlyContributionAmount || 500;
-
-    const now = new Date();
-
-    const month = `${now.getFullYear()}-${String(
-      now.getMonth() + 1
-    ).padStart(2, "0")}`;
-
-    if (!group.adminId.upiId) {
-      return res.status(400).json({
-        message: "Admin UPI ID not found",
-      });
-    }
-
-    const transactionNote = `${group.groupName} Contribution ${month}`;
-
-    const upiDeepLink =
-      `upi://pay?pa=${encodeURIComponent(group.adminId.upiId)}` +
-      `&pn=${encodeURIComponent(group.adminId.fullName)}` +
-      `&am=${amount}` +
-      `&cu=INR` +
-      `&tn=${encodeURIComponent(transactionNote)}`;
-
-    res.status(200).json({
-  message: "Payment page data fetched successfully",
-
-  group: {
-    groupId: group._id,
-    groupName: group.groupName,
-  },
-
-  amountDetails: {
-    amount,
-    month,
-  },
-
-  ownerAccount: {
-    adminId: group.adminId._id,
-    adminName: group.adminId.fullName,
-
-    upiId: group.adminId.upiId,
-
-    bankAccountDetails: {
-      accountHolderName:
-        group.adminId.bankAccountDetails?.accountHolderName,
-
-      bankName:
-        group.adminId.bankAccountDetails?.bankName,
-
-      accountNumber:
-        group.adminId.bankAccountDetails?.accountNumber,
-
-      ifscCode:
-        group.adminId.bankAccountDetails?.ifscCode,
-    },
-  },
-
-  paymentDetails: {
-    upiDeepLink,
-  },
-});
-  } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
-    }
-};
-
-const resubmitPaymentRequest = async (req, res) => {
-    try {
-
-        const { paymentRequestId } = req.params;
-
-        const { additionalComments } = req.body;
-
-        const screenshotUrl = req.file?.path;
-
-        if (!screenshotUrl) {
-            return res.status(400).json({
-                message: "Screenshot is required"
-            });
-        }
-
-        const paymentRequest = await PaymentRequest.findById(paymentRequestId);
-
-        if (!paymentRequest) {
-            return res.status(404).json({
-                message: "Payment request not found"
-            });
-        }
-
-        if (paymentRequest.userId.toString() !== req.user._id.toString()) {
-            return res.status(403).json({
-                message: "Unauthorized"
-            });
-        }
-
-        if (paymentRequest.status !== "rejected") {
-            return res.status(400).json({
-                message: "Only rejected payment requests can be resubmitted"
-            });
-        }
-
-        paymentRequest.screenshotUrl = screenshotUrl;
-
-        paymentRequest.additionalComments =
-            additionalComments || "";
-
-        paymentRequest.status = "pending";
-
-        paymentRequest.rejectionReason = null;
-
-        paymentRequest.rejectedAt = null;
-
-        paymentRequest.resubmittedAt = new Date();
-
-        paymentRequest.resubmissionCount += 1;
-
-        await paymentRequest.save();
-
-        await createNotification({
-            userId: paymentRequest.adminId,
-            groupId: paymentRequest.groupId,
-            title: "Payment Resubmitted",
-            message: `A new payment screenshot has been uploaded for ${paymentRequest.month}`,
-            type: "payment_resubmitted"
-        });
-
-        res.status(200).json({
-            message: "Payment resubmitted successfully",
-            paymentRequest
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            message: error.message
-        });
-    }
-};
-const getRejectedPaymentRequestDetails = async (req, res) => {
-    try {
-
-        const { paymentRequestId } = req.params;
-
-        const paymentRequest = await PaymentRequest.findById(paymentRequestId)
-            .populate("adminId", "fullName")
-            .populate("groupId", "groupName groupCode")
-            .populate("userId", "fullName");
-
-        if (!paymentRequest) {
-            return res.status(404).json({
-                message: "Payment request not found"
-            });
-        }
-
-        // only owner can view
-        if (
-            paymentRequest.userId._id.toString() !==
-            req.user._id.toString()
-        ) {
-            return res.status(403).json({
-                message: "Unauthorized"
-            });
-        }
-
-        res.status(200).json({
-            message: "Payment request fetched successfully",
-
-            paymentRequest: {
-
-                paymentRequestId: paymentRequest._id,
-
-                status: paymentRequest.status,
-
-                amount: paymentRequest.amount,
-
-                month: paymentRequest.month,
-
-                screenshotUrl: paymentRequest.screenshotUrl,
-
-                submittedAt: paymentRequest.createdAt,
-
-                rejectedAt: paymentRequest.rejectedAt,
-
-                acceptedAt: paymentRequest.acceptedAt,
-
-                rejectionReason:
-                    paymentRequest.rejectionReason,
-
-                additionalComments:
-                    paymentRequest.additionalComments,
-
-                resubmittedAt:
-                    paymentRequest.resubmittedAt,
-
-                resubmissionCount:
-                    paymentRequest.resubmissionCount,
-
-                group: {
-                    groupId: paymentRequest.groupId._id,
-                    groupName: paymentRequest.groupId.groupName,
-                    groupCode: paymentRequest.groupId.groupCode,
-                },
-
-                admin: {
-                    adminId: paymentRequest.adminId._id,
-                    fullName: paymentRequest.adminId.fullName,
-                }
+            const paymentRequest =
+                await PaymentRequest.findById(
+                    paymentRequestId
+                );
+
+            if (!paymentRequest) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Payment request not found"
+                });
             }
-        });
+            if (
+                paymentRequest.userId.toString() !==
+                req.user._id.toString()
+            ) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Unauthorized access"
+                });
+            }
+            if (
+                paymentRequest.status !==
+                "rejected"
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Only rejected payment requests can be resubmitted"
+                });
+            }
+            paymentRequest.screenshotUrl =
+                screenshotUrl;
+            paymentRequest.additionalComments =
+                additionalComments || "";
+            paymentRequest.status =
+                "pending";
+            paymentRequest.rejectionReason =
+                "";
+            paymentRequest.rejectedAt =
+                null;
+            paymentRequest.resubmittedAt =
+                new Date();
+            paymentRequest.resubmissionCount =
+                (paymentRequest.resubmissionCount || 0) + 1;
+            await paymentRequest.save();
+            await createNotification({
+                userId: paymentRequest.adminId,
+                groupId: paymentRequest.groupId,
+                title: "Payment Resubmitted",
+                message: `${req.user.fullName} has resubmitted payment proof for ${paymentRequest.month}`,
+                type: "payment_resubmitted"
+            });
 
-    } catch (error) {
+            return res.status(200).json({
+                success: true,
+                message: "Payment resubmitted successfully",
+                paymentRequest
+            });
 
-        res.status(500).json({
-            message: error.message
-        });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    };
 
-    }
-};
+const getRejectedPaymentRequestDetails =
+    async(req, res) => {
+        try {
+            const {
+                paymentRequestId
+            } = req.params;
+            const paymentRequest =
+                await PaymentRequest.findById(
+                    paymentRequestId
+                )
+                .populate(
+                    "adminId",
+                    "fullName mobileNumber"
+                )
+                .populate(
+                    "groupId",
+                    `
+                        groupName
+                    groupCode
+                    `
+                )
+                .populate(
+                    "userId",
+                    `
+                    fullName
+                    mobileNumber
+                    profilePicture
+                    `
+                )
+                .populate(
+                    "installmentIds"
+                );
+
+            if (!paymentRequest) {
+
+                return res.status(404).json({
+
+                    success: false,
+                    message: "Payment request not found"
+                });
+            }
+            if (
+                paymentRequest.userId._id.toString() !==
+                req.user._id.toString()
+
+            ) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Unauthorized access"
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Payment request fetched successfully",
+                paymentRequest: {
+                    paymentRequestId: paymentRequest._id,
+                    status: paymentRequest.status,
+                    month: paymentRequest.month,
+                    contributionAmount: paymentRequest.contributionAmount || 0,
+                    loanAmount: paymentRequest.loanAmount || 0,
+                    totalAmount: paymentRequest.amount || 0,
+                    installmentCount: paymentRequest.installmentIds ? paymentRequest.installmentIds.length || 0 : 0,
+                    installments: paymentRequest.installmentIds || [],
+                    screenshotUrl: paymentRequest.screenshotUrl,
+                    extractedInfo: paymentRequest.extractedInfo,
+                    submittedAt: paymentRequest.createdAt,
+                    rejectedAt: paymentRequest.rejectedAt,
+                    acceptedAt: paymentRequest.acceptedAt,
+                    resubmittedAt: paymentRequest.resubmittedAt,
+                    rejectionReason: paymentRequest.rejectionReason || "",
+                    additionalComments: paymentRequest.additionalComments || "",
+                    resubmissionCount: paymentRequest.resubmissionCount || 0,
+                    group: {
+                        groupId: paymentRequest.groupId ? paymentRequest.groupId._id || null : null,
+                        groupName: paymentRequest.groupId ? paymentRequest.groupId.groupName || "" : "",
+                        groupCode: paymentRequest.groupId ? paymentRequest.groupId.groupCode || "" : "",
+                    },
+                    admin: {
+                        adminId: paymentRequest.adminId ? paymentRequest.adminId._id || null : null,
+                        fullName: paymentRequest.adminId ? paymentRequest.adminId.fullName || "" : "",
+                        mobileNumber: paymentRequest.adminId ? paymentRequest.adminId.mobileNumber || "" : "",
+                    },
+                    member: {
+
+                        memberId: paymentRequest.userId ? paymentRequest.userId._id || null : null,
+                        fullName: paymentRequest.userId ? paymentRequest.userId.fullName || "Unknown Member" : "Unknown Member",
+                        mobileNumber: paymentRequest.userId ? paymentRequest.userId.mobileNumber || "" : "",
+                        profilePicture: paymentRequest.userId ? paymentRequest.userId.profilePicture || "" : "",
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    };
 
 module.exports = {
     createPaymentRequest,
     updatePaymentRequestStatus,
-    getMemberPaymentPage,
     getMemberPaymentHistory,
     getAdminPaymentRequests,
     getPaymentRequestDetail,

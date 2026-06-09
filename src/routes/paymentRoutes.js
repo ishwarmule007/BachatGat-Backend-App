@@ -5,7 +5,6 @@ const authMiddleware = require("../middlewares/authMiddleware");
 const adminMiddleware = require("../middlewares/adminMiddleware");
 const {
     updatePaymentRequestStatus,
-    getMemberPaymentPage,
     getMemberPaymentHistory,
     getAdminPaymentRequests,
     getPaymentRequestDetail,
@@ -134,87 +133,6 @@ router.get(
     authMiddleware,
     getMemberPaymentHistory
 );
-/**
- * @swagger
- * /api/payments/member/{groupCode}:
- *   get:
- *     summary: Get member payment page details
- *     tags: [Payment]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: groupCode
- *         required: true
- *         schema:
- *           type: string
- *         example: "SBG-001"
- *     responses:
- *       200:
- *         description: Member payment page fetched successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Member payment page fetched successfully"
- *                 paymentPage:
- *                   type: object
- *                   properties:
- *                     group:
- *                       type: object
- *                       properties:
- *                         groupId:
- *                           type: string
- *                           example: "665c1f9a2b7d8f1234567890"
- *                         groupName:
- *                           type: string
- *                           example: "Developer Group"
- *                         groupCode:
- *                           type: string
- *                           example: "SBG-001"
- *                     amount:
- *                       type: number
- *                       example: 500
- *                     ownerAccount:
- *                       type: object
- *                       properties:
- *                         adminName:
- *                           type: string
- *                           example: "Atharv Saraf"
- *                         mobileNumber:
- *                           type: string
- *                           example: "9876543210"
- *                         upiId:
- *                           type: string
- *                           example: "atharv@upi"
- *                     upiLink:
- *                       type: string
- *                       example: "upi://pay?pa=atharv@upi"
- *       400:
- *         description: Admin has not added UPI ID yet
- *       401:
- *         description: Unauthorized - Token missing or invalid
- *       403:
- *         description: User is not approved member
- *       404:
- *         description: Group not found
- *       500:
- *         description: Internal server error
- */
-router.get(
-    "/member/:groupCode",
-    authMiddleware,
-    getMemberPaymentPage
-);
-
-
-
 /**
  * @swagger
  * /api/payments/admin/requests:
@@ -398,7 +316,7 @@ router.get(
 
 /**
  * @swagger
- * /api/payments/generate-payment-link/{groupId}:
+ * /api/payments/member/{groupId}:
  *   get:
  *     summary: Generate contribution payment deep link
  *     tags: [Payment]
@@ -465,7 +383,7 @@ router.get(
  *         description: Internal server error
  */
 router.get(
-    "/generate-payment-link/:groupId",
+    "/member/:groupId",
     authMiddleware,
     generateContributionPaymentLink
 );
