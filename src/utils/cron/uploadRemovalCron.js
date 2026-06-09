@@ -1,8 +1,8 @@
 const cron = require("node-cron");
 
-const Message = require("../models/Message");
+const Message = require("../../models/Message");
 
-const cloudinary = require("../config/cloudinary");
+const cloudinary = require("../../config/cloudinary");
 
 cron.schedule("0 * * * *", async() => {
 

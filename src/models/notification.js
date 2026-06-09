@@ -48,8 +48,14 @@ const notificationSchema = new mongoose.Schema({
             "loan_proposal_accepted_by_member",
             "loan_proposal_rejected_by_member",
             "loan_created",
-            "loan_approved_for_member"
+            "loan_approved_for_member",
 
+            //Payment reminder related
+            "payment_reminder_10_days",
+            "payment_reminder_5_days",
+            "payment_reminder_1_day",
+            "payment_overdue_member",
+            "payment_overdue_admin"
         ],
         required: true
     },
