@@ -58,6 +58,43 @@ const requestLoan = async(
                 message: "You are not a member"
             });
         }
+        if (!member) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not a member"
+            });
+        }
+
+        if (!group.endDate) {
+            return res.status(400).json({
+
+                success: false,
+
+                message: "Group end date is not configured"
+            });
+        }
+
+        const today =
+            new Date();
+
+        const loanEndDate =
+            new Date(today);
+
+        loanEndDate.setMonth(
+            loanEndDate.getMonth() +
+            Number(requestedDurationMonths)
+        );
+
+        if (loanEndDate > group.endDate) {
+
+            return res.status(400).json({
+
+                success: false,
+
+                message: "Loan duration exceeds group ending date"
+            });
+        }
+
         const request =
             await LoanRequest.create({
 
