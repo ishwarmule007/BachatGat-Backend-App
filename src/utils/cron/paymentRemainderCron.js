@@ -11,7 +11,7 @@ const PaymentRequest =
     require("../../models/PaymentRequest");
 
 const createNotification =
-    require("../../utils/createNotification");
+    require("../createNotification");
 
 const runPaymentReminderCron =
     () => {
