@@ -5,7 +5,7 @@ const Group =
     require("../../models/Group");
 
 const Contribution =
-    require("../../models/Contribution");
+    require("../../models/contribution");
 
 const PaymentRequest =
     require("../../models/PaymentRequest");
