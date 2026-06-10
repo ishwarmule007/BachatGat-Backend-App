@@ -361,58 +361,152 @@ const getMemberHomeDashboard = async(req, res) => {
 const getMemberProfile = async(req, res) => {
     try {
         const userId = req.user._id || req.user.id;
-
         const user = await User.findById(userId).select(
-            "fullName mobileNumber address dateofBirth  groupIds"
+            "fullName mobileNumber address dateOfBirth createdAt"
         );
-
         if (!user) {
             return res.status(404).json({
                 message: "User not found"
             });
         }
+        const groups = await Group.find({
+            members: {
+                $elemMatch: {
+                    userId,
+                    status: "approved"
+                }
+            }
+        }).select(
+            "groupName groupCode members"
+        );
 
-        const activeGroup = await Group.findOne({
-            "members.userId": userId,
-            "members.status": "approved"
-        }).select("groupName members");
+        const formattedGroups = groups.map((group) => {
 
-        const memberData = activeGroup ? activeGroup.members ? activeGroup.members.find(
-            (member) => member.userId.toString() === userId.toString()
-        ) : null : null;
+            const member = group.members.find(
+                (m) =>
+                m.userId.toString() ===
+                userId.toString()
+            );
 
+            return {
+                groupId: group._id,
+
+                groupName: group.groupName,
+
+                groupCode: group.groupCode,
+
+                monthlyContribution: member ? member.monthlyContribution || 0 : 0,
+
+                joinedAt: member ? member.joinedAt || null : null,
+
+                status: member ? member.status || null : null
+            };
+        });
+        const currentDate = new Date();
+        const currentMonthStart = new Date(
+            currentDate.getFullYear(),
+            currentDate.getMonth(),
+            1
+        );
+        const paidThisMonthResult =
+            await Contribution.aggregate([{
+                    $match: {
+                        userId,
+                        status: "paid",
+                        paymentDate: {
+                            $gte: currentMonthStart
+                        }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        total: {
+                            $sum: "$amount"
+                        }
+                    }
+                }
+            ]);
+
+        const totalPaidThisMonth =
+            paidThisMonthResult[0] ? paidThisMonthResult[0].total || 0 : 0;
+
+        const paidAllTimeResult =
+            await Contribution.aggregate([{
+                    $match: {
+                        userId,
+                        status: "paid"
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        total: {
+                            $sum: "$amount"
+                        }
+                    }
+                }
+            ]);
+
+        const totalPaidAllTime =
+            paidAllTimeResult[0] ? paid.total || 0 : 0;
+
+        const totalMonthlyContribution =
+            formattedGroups.reduce(
+                (sum, group) =>
+                sum + group.monthlyContribution,
+                0
+            );
+        const pendingAmount =
+            Math.max(
+                totalMonthlyContribution -
+                totalPaidThisMonth,
+                0
+            );
         const loanSummary = await Loan.aggregate([{
                 $match: {
-                    userId: user._id
+                    userId
                 }
             },
             {
                 $group: {
                     _id: null,
-                    loanTaken: { $sum: "$loanAmount" },
-                    loanPaid: { $sum: "$paidAmount" }
+                    loanTaken: {
+                        $sum: "$loanAmount"
+                    },
+                    loanPaid: {
+                        $sum: "$paidAmount"
+                    }
                 }
             }
         ]);
 
-        const loanTaken = loanSummary[0] ? loanSummary[0].loanTaken || 0 : 0;
-        const loanPaid = loanSummary[0] ? loanSummary[0].loanPaid || 0 : 0;
-        const remainingToPay = loanTaken - loanPaid;
+        const loanTaken =
+            loanSummary[0] ? loanSummary[0].loanTaken || 0 : 0;
 
-        res.status(200).json({
+        const loanPaid =
+            loanSummary[0] ? loanSummary[0].loanPaid || 0 : 0;
+
+        const remainingToPay =
+            loanTaken - loanPaid;
+        return res.status(200).json({
+
             message: "Member profile fetched successfully",
+
             profile: {
-                name: user.fullName,
-                status: memberData ? memberData.status : null,
-                memberId: memberData ? memberData.membershipId || null : null
-            },
-
-
-            personalInformation: {
                 memberName: user.fullName,
                 mobileNumber: user.mobileNumber,
                 address: user.address || null,
-                dateOfBirth: user.dateOfBirth
+                dateOfBirth: user.dateOfBirth || null
+            },
+
+            groups: formattedGroups,
+
+            paymentSummary: {
+                totalPaidThisMonth,
+                pendingAmount,
+                totalPaidAllTime,
+                totalMonthlyContribution
             },
 
             loanSummary: {
@@ -421,13 +515,11 @@ const getMemberProfile = async(req, res) => {
                 remainingToPay,
                 status: remainingToPay > 0 ?
                     "Keep going! You're doing great." : "No pending loan"
-            },
-
-            memberSince: memberData ? memberData.joinedAt || user.createdAt : null
-
+            }
         });
+
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             message: error.message
         });
     }
