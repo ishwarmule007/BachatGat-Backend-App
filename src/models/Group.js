@@ -70,6 +70,16 @@ const groupSchema = new mongoose.Schema({
         joinedAt: {
             type: Date,
             default: Date.now
+        },
+        lastSeenMessageId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Message",
+            default: null
+        },
+
+        unreadCount: {
+            type: Number,
+            default: 0
         }
     }]
 }, { timestamps: true });

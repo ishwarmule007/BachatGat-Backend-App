@@ -354,6 +354,18 @@ const initializeSocket = (server) => {
                                     ._id,
                             }, ],
                         });
+                    await Group.updateOne({ _id: group._id }, {
+                        $inc: {
+                            "members.$[elem].unreadCount": 1
+                        }
+                    }, {
+                        arrayFilters: [{
+                            "elem.userId": {
+                                $ne: socket.user._id
+                            },
+                            "elem.status": "approved"
+                        }]
+                    });
                     const populatedMessage =
                         await Message.findById(
                             newMessage._id

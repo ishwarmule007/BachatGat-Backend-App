@@ -89,6 +89,20 @@ const getGroupMessages = async(req, res) => {
                 }),
             };
         });
+        const lastMessage =
+            formattedMessages.length > 0 ?
+            formattedMessages[formattedMessages.length - 1] :
+            null;
+
+        await Group.updateOne({
+            _id: group._id,
+            "members.userId": userId
+        }, {
+            $set: {
+                "members.$.unreadCount": 0,
+                "members.$.lastSeenMessageId": lastMessage ? lastMessage._id || null : null
+            }
+        });
 
         res.status(200).json({
             message: "Messages fetched successfully",

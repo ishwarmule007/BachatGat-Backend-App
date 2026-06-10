@@ -178,23 +178,43 @@ const getMyGroups = async(req, res) => {
             });
         }
 
-        const formattedGroups = groups.map((group) => ({
-            groupId: group._id,
-            groupName: group.groupName,
-            groupCode: group.groupCode,
+        const formattedGroups = groups.map((group) => {
 
-            isArchived: user.archivedGroups.some(
-                (id) => id.toString() === group._id.toString()
-            ),
+            const myMember = group.members.find(
+                (member) =>
+                member.userId.toString() ===
+                userId.toString()
+            );
 
-            formationDate: group.formationDate,
-            totalSaving: group.totalSaving || 0,
-            totalLoanGiven: group.totalLoanGiven || 0,
+            return {
+                groupId: group._id,
 
-            totalMembers: group.members.filter(
-                (member) => member.status === "approved"
-            ).length,
-        }));
+                groupName: group.groupName,
+
+                groupCode: group.groupCode,
+
+                unreadCount: myMember ? myMember.unreadCount || 0 : 0,
+
+                lastSeenMessageId: myMember ? myMember.lastSeenMessageId || null : null,
+
+                isArchived: user.archivedGroups.some(
+                    (id) =>
+                    id.toString() ===
+                    group._id.toString()
+                ),
+
+                formationDate: group.formationDate,
+
+                totalSaving: group.totalSaving || 0,
+
+                totalLoanGiven: group.totalLoanGiven || 0,
+
+                totalMembers: group.members.filter(
+                    (member) =>
+                    member.status === "approved"
+                ).length,
+            };
+        });
 
         return res.status(200).json({
             message: "Groups fetched successfully",
