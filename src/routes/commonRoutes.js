@@ -210,6 +210,7 @@ router.get(
  *     tags: [Common]
  *     security:
  *       - bearerAuth: []
+ *
  *     responses:
  *       200:
  *         description: Groups fetched successfully
@@ -221,43 +222,57 @@ router.get(
  *                 message:
  *                   type: string
  *                   example: "Groups fetched successfully"
+ *
  *                 groups:
  *                   type: array
  *                   items:
  *                     type: object
  *                     properties:
+ *
  *                       groupId:
  *                         type: string
  *                         example: "665c1f9a2b7d8f1234567890"
+ *
  *                       groupName:
  *                         type: string
  *                         example: "Developer Group"
+ *
  *                       groupCode:
  *                         type: string
  *                         example: "SBG-001"
+ *
+ *                       unreadCount:
+ *                         type: number
+ *                         example: 5
+ *
+ *                       lastSeenMessageId:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "666d2f8a9c7e1f9876543210"
+ *
+ *                       isArchived:
+ *                         type: boolean
+ *                         example: false
+ *
  *                       totalMembers:
  *                         type: number
  *                         example: 12
+ *
  *                       totalSaving:
  *                         type: number
  *                         example: 50000
+ *
+ *                       totalLoanGiven:
+ *                         type: number
+ *                         example: 20000
+ *
  *                       formationDate:
  *                         type: string
  *                         format: date
- *                       location:
- *                         type: object
- *                         properties:
- *                           address:
- *                             type: string
- *                             example: "Ring road , hauz khas,south delhi, India"
- *                           latitude:
- *                             type: number
- *                             example: 19.9975
- *                           longitude:
- *                             type: number
- *                             example: 73.7898
+ *
  *       401:
  *         description: Unauthorized - Token missing or invalid
+ *
  *       500:
  *         description: Failed to fetch groups
  */
@@ -266,7 +281,6 @@ router.get(
     authMiddleware,
     getMyGroups
 );
-
 
 /**
  * @swagger
