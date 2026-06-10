@@ -219,11 +219,12 @@ router.get(
  *             schema:
  *               type: object
  *               properties:
+ *
  *                 message:
  *                   type: string
  *                   example: "Groups fetched successfully"
  *
- *                 groups:
+ *                 activeGroups:
  *                   type: array
  *                   items:
  *                     type: object
@@ -242,7 +243,7 @@ router.get(
  *                         example: "SBG-001"
  *
  *                       unreadCount:
- *                         type: number
+ *                         type: integer
  *                         example: 5
  *
  *                       lastSeenMessageId:
@@ -255,7 +256,7 @@ router.get(
  *                         example: false
  *
  *                       totalMembers:
- *                         type: number
+ *                         type: integer
  *                         example: 12
  *
  *                       totalSaving:
@@ -269,6 +270,97 @@ router.get(
  *                       formationDate:
  *                         type: string
  *                         format: date
+ *
+ *                       groupStatus:
+ *                         type: string
+ *                         enum: [active, closed]
+ *                         example: "active"
+ *
+ *                 removedGroups:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *
+ *                       groupId:
+ *                         type: string
+ *
+ *                       groupName:
+ *                         type: string
+ *
+ *                       groupCode:
+ *                         type: string
+ *
+ *                       unreadCount:
+ *                         type: integer
+ *
+ *                       lastSeenMessageId:
+ *                         type: string
+ *                         nullable: true
+ *
+ *                       isArchived:
+ *                         type: boolean
+ *
+ *                       totalMembers:
+ *                         type: integer
+ *
+ *                       totalSaving:
+ *                         type: number
+ *
+ *                       totalLoanGiven:
+ *                         type: number
+ *
+ *                       formationDate:
+ *                         type: string
+ *                         format: date
+ *
+ *                       groupStatus:
+ *                         type: string
+ *                         enum: [active, closed]
+ *                         example: "active"
+ *
+ *                 closedGroups:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *
+ *                       groupId:
+ *                         type: string
+ *
+ *                       groupName:
+ *                         type: string
+ *
+ *                       groupCode:
+ *                         type: string
+ *
+ *                       unreadCount:
+ *                         type: integer
+ *
+ *                       lastSeenMessageId:
+ *                         type: string
+ *                         nullable: true
+ *
+ *                       isArchived:
+ *                         type: boolean
+ *
+ *                       totalMembers:
+ *                         type: integer
+ *
+ *                       totalSaving:
+ *                         type: number
+ *
+ *                       totalLoanGiven:
+ *                         type: number
+ *
+ *                       formationDate:
+ *                         type: string
+ *                         format: date
+ *
+ *                       groupStatus:
+ *                         type: string
+ *                         enum: [active, closed]
+ *                         example: "closed"
  *
  *       401:
  *         description: Unauthorized - Token missing or invalid

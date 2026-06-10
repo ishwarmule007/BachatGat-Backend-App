@@ -931,10 +931,11 @@ router.patch(
  * @swagger
  * /api/admin/groups/{groupId}:
  *   delete:
- *     summary: Delete group by admin if no active loan remains
+ *     summary: Close group by admin if no active loan remains
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
+ *
  *     parameters:
  *       - in: path
  *         name: groupId
@@ -942,17 +943,40 @@ router.patch(
  *         schema:
  *           type: string
  *         description: MongoDB group ID
+ *
  *     responses:
  *       200:
- *         description: Group deleted successfully
+ *         description: Group closed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   example: "Group closed successfully"
+ *
+ *                 groupId:
+ *                   type: string
+ *                   example: "665c1f9a2b7d8f1234567890"
+ *
+ *                 closedAt:
+ *                   type: string
+ *                   format: date-time
+ *
  *       400:
- *         description: Group cannot be deleted because active loan still exists
+ *         description: Group cannot be closed because active loan still exists or group is already closed
+ *
  *       401:
  *         description: Unauthorized or token missing
+ *
  *       403:
  *         description: Admin access required
+ *
  *       404:
  *         description: Group not found or unauthorized
+ *
  *       500:
  *         description: Server error
  */
@@ -966,17 +990,20 @@ router.delete(
  * @swagger
  * /api/admin/groups/{groupCode}/members/{memberId}:
  *   delete:
- *     summary: Remove a member from group
+ *     summary: Remove member from group
+ *     description: Only group admin can remove approved or pending members from the group.
  *     tags: [Admin]
+ *
  *     security:
  *       - bearerAuth: []
+ *
  *     parameters:
  *       - in: path
  *         name: groupCode
  *         required: true
  *         schema:
  *           type: string
- *         example: "Atharv-011"
+ *         example: "ATHARV-011"
  *         description: Unique group code
  *
  *       - in: path
@@ -988,6 +1015,7 @@ router.delete(
  *         description: User ID of member to remove
  *
  *     responses:
+ *
  *       200:
  *         description: Member removed successfully
  *         content:
@@ -995,39 +1023,48 @@ router.delete(
  *             schema:
  *               type: object
  *               properties:
+ *
  *                 message:
  *                   type: string
  *                   example: "Member removed successfully"
  *
  *       400:
- *         description: Invalid request
+ *         description: Invalid request or admin removal attempt
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
+ *
  *                 message:
  *                   type: string
- *                   example: "memberId is required"
+ *                   examples:
+ *                     missingMemberId:
+ *                       value: "memberId is required"
+ *
+ *                     cannotRemoveAdmin:
+ *                       value: "Admin cannot remove himself"
  *
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorized - Token missing or invalid
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
+ *
  *                 message:
  *                   type: string
  *                   example: "Unauthorized"
  *
  *       403:
- *         description: Only admin can remove members
+ *         description: Only group admin can remove members
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
+ *
  *                 message:
  *                   type: string
  *                   example: "Only admin can remove members"
@@ -1039,9 +1076,27 @@ router.delete(
  *             schema:
  *               type: object
  *               properties:
+ *
  *                 message:
  *                   type: string
- *                   example: "Group not found"
+ *                   examples:
+ *                     groupNotFound:
+ *                       value: "Group not found"
+ *
+ *                     memberNotFound:
+ *                       value: "Member not found in group"
+ *
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
  */
 router.delete(
     "/groups/:groupCode/members/:memberId",
