@@ -212,10 +212,6 @@ const rejectGroupRequest = async(req, res) => {
         });
     }
 };
-const User = require("../../models/User");
-const Group = require("../../models/Group");
-const Contribution = require("../../models/Contribution");
-
 const getMemberHomeDashboard = async(req, res) => {
     try {
         const userId = req.user._id || req.user.id;
