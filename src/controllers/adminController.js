@@ -647,20 +647,21 @@ const getAdminPaymentDashboard = async(req, res) => {
 const removeMemberFromGroup = async(req, res) => {
     try {
         const adminId = req.user._id;
-        const { groupCode, memberId } = req.params;
-
+        const {
+            groupCode,
+            memberId
+        } = req.params;
         const group = await Group.findOne({
             groupCode,
             adminId,
         });
-
         if (!group) {
             return res.status(404).json({
                 message: "Group not found or you are not admin of this group",
             });
         }
-
-        const durationInYears = group.durationOfGroup;
+        const durationInYears =
+            group.durationOfGroup;
 
         if (
             durationInYears === undefined ||
@@ -671,19 +672,24 @@ const removeMemberFromGroup = async(req, res) => {
             });
         }
 
-        const groupEndDate = new Date(group.createdAt);
-        groupEndDate.setFullYear(groupEndDate.getFullYear() + durationInYears);
-
+        const groupEndDate =
+            new Date(group.createdAt);
+        groupEndDate.setFullYear(
+            groupEndDate.getFullYear() +
+            durationInYears
+        );
         if (new Date() < groupEndDate) {
+
             return res.status(400).json({
                 message: "Group duration is not completed yet",
+
                 groupEndDate,
             });
         }
-
         const member = group.members.find(
             (m) =>
-            m.userId.toString() === memberId &&
+            m.userId.toString() ===
+            memberId &&
             m.status === "approved"
         );
 
@@ -692,42 +698,37 @@ const removeMemberFromGroup = async(req, res) => {
                 message: "Approved member not found in this group",
             });
         }
-
-        const activeLoan = await Loan.findOne({
-            groupId: group._id,
-            userId: memberId,
-            $or: [{
-                    loanStatus: "ACTIVE",
-                },
-                {
-                    loanStatus: "OVERDUE",
-                },
-            ],
-        });
+        const activeLoan =
+            await Loan.findOne({
+                groupId: group._id,
+                userId: memberId,
+                $or: [{
+                        loanStatus: "ACTIVE",
+                    },
+                    {
+                        loanStatus: "OVERDUE",
+                    },
+                ],
+            });
 
         if (activeLoan) {
             return res.status(400).json({
                 message: "Member cannot be removed because loan is pending or remaining loan amount is not zero",
             });
         }
-
-        group.members = group.members.filter(
-            (m) => m.userId.toString() !== memberId
-        );
-
+        member.status = "removed";
+        member.removedAt = new Date();
         await group.save();
 
-        await User.findByIdAndUpdate(memberId, {
-            $pull: { groupIds: group._id },
-        });
-
-        res.status(200).json({
+        return res.status(200).json({
             message: "Member removed from group successfully",
             groupId: group._id,
             removedMemberId: memberId,
+            removedAt: member.removedAt
         });
+
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             message: error.message,
         });
     }
@@ -850,7 +851,9 @@ const editMemberByAdmin = async(req, res) => {
     }
 };
 const deleteGroupByAdmin = async(req, res) => {
+
     try {
+
         const adminId = req.user._id;
         const { groupId } = req.params;
         const group = await Group.findOne({
@@ -863,30 +866,32 @@ const deleteGroupByAdmin = async(req, res) => {
                 message: "Group not found or unauthorized",
             });
         }
-        const activeLoan = await Loan.findOne({
-            groupId,
-            loanStatus: { $in: ["ACTIVE", "OVERDUE"] },
-        });
+        const activeLoan =
+            await Loan.findOne({
+
+                groupId,
+
+                loanStatus: {
+                    $in: [
+                        "ACTIVE",
+                        "OVERDUE"
+                    ]
+                },
+            });
 
         if (activeLoan) {
             return res.status(400).json({
-                message: "Group cannot be deleted because active loan still exists",
+                message: "Group cannot be closed because active loan still exists",
             });
         }
-        await User.updateMany({
-            groupIds: groupId,
-        }, {
-            $pull: {
-                groupIds: groupId,
-            },
-        });
-
-        await Group.findByIdAndDelete(groupId);
-
+        group.groupStatus = "closed";
+        group.closedAt = new Date();
+        await group.save();
         return res.status(200).json({
-            message: "Group deleted successfully",
+            message: "Group closed successfully",
+            groupId: group._id,
+            closedAt: group.closedAt
         });
-
     } catch (error) {
         return res.status(500).json({
             message: error.message,

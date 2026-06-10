@@ -154,71 +154,90 @@ const getGroupDetails = async(req, res) => {
     }
 };
 const getMyGroups = async(req, res) => {
+
     try {
         const userId = req.user._id;
-
         const user = await User.findById(userId);
-
         let groups = [];
-
-
         if (user.roleSelection === "admin") {
             groups = await Group.find({
                 adminId: userId
             });
         } else {
-
             groups = await Group.find({
-                members: {
-                    $elemMatch: {
-                        userId,
-                        status: "approved"
-                    }
-                }
+                "members.userId": userId
             });
         }
+        const activeGroups = [];
+        const removedGroups = [];
+        const closedGroups = [];
+        groups.forEach((group) => {
 
-        const formattedGroups = groups.map((group) => {
+            const myMember =
+                group.members.find(
+                    (member) =>
+                    member.userId.toString() ===
+                    userId.toString()
+                );
 
-            const myMember = group.members.find(
-                (member) =>
-                member.userId.toString() ===
-                userId.toString()
-            );
-
-            return {
+            const formattedGroup = {
                 groupId: group._id,
-
                 groupName: group.groupName,
-
                 groupCode: group.groupCode,
-
-                unreadCount: myMember ? myMember.unreadCount || 0 : 0,
-
-                lastSeenMessageId: myMember ? myMember.lastSeenMessageId || null : null,
-
+                unreadCount: myMember ?
+                    myMember.unreadCount || 0 : 0,
+                lastSeenMessageId: myMember ?
+                    myMember.lastSeenMessageId || null : null,
                 isArchived: user.archivedGroups.some(
                     (id) =>
                     id.toString() ===
                     group._id.toString()
                 ),
-
                 formationDate: group.formationDate,
-
                 totalSaving: group.totalSaving || 0,
-
                 totalLoanGiven: group.totalLoanGiven || 0,
-
                 totalMembers: group.members.filter(
                     (member) =>
-                    member.status === "approved"
+                    member.status ===
+                    "approved"
                 ).length,
-            };
-        });
 
+                groupStatus: group.groupStatus || "active"
+            };
+            if (
+                group.groupStatus ===
+                "closed"
+            ) {
+                closedGroups.push(
+                    formattedGroup
+                );
+                return;
+            }
+            if (
+                myMember &&
+                myMember.status ===
+                "removed"
+            ) {
+                removedGroups.push(
+                    formattedGroup
+                );
+                return;
+            }
+            if (
+                myMember &&
+                myMember.status ===
+                "approved"
+            ) {
+                activeGroups.push(
+                    formattedGroup
+                );
+            }
+        });
         return res.status(200).json({
             message: "Groups fetched successfully",
-            groups: formattedGroups
+            activeGroups,
+            removedGroups,
+            closedGroups
         });
 
     } catch (error) {
