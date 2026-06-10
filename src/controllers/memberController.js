@@ -212,27 +212,41 @@ const rejectGroupRequest = async(req, res) => {
         });
     }
 };
+const User = require("../../models/User");
+const Group = require("../../models/Group");
+const Contribution = require("../../models/Contribution");
+
 const getMemberHomeDashboard = async(req, res) => {
     try {
         const userId = req.user._id || req.user.id;
 
         const user = await User.findById(userId).select(
-            "fullName  groupIds"
+            "fullName groupIds"
         );
 
         if (!user) {
-            return res.status(404).json({ message: "User not found" });
+            return res.status(404).json({
+                message: "User not found"
+            });
         }
-
         const groups = await Group.find({
-            "members.userId": userId,
-            "members.status": "approved"
+            members: {
+                $elemMatch: {
+                    userId,
+                    status: "approved"
+                }
+            }
         });
 
         const now = new Date();
         const currentMonth = `${now.getFullYear()}-${String(
-      now.getMonth() + 1
-    ).padStart(2, "0")}`;
+            now.getMonth() + 1
+        ).padStart(2, "0")}`;
+        const lastDateOfMonth = new Date(
+            now.getFullYear(),
+            now.getMonth() + 1,
+            0
+        );
 
         let totalPaidThisMonth = 0;
         let pendingAmountThisMonth = 0;
@@ -240,69 +254,68 @@ const getMemberHomeDashboard = async(req, res) => {
         let upcomingCollectionsThisMonth = 0;
 
         const groupData = [];
+        const allContributions = await Contribution.find({
+            userId
+        });
 
         for (const group of groups) {
             const member = group.members.find(
-                (m) => m.userId.toString() === userId.toString()
+                (m) =>
+                m.userId.toString() ===
+                userId.toString()
             );
-
             const monthlyContribution =
-                member ? group.members.find((m) => m.userId.toString() === userId.toString()).monthlyContributionAmount : group.monthlyContribution || 0;
-
-            const paidThisMonth = await Contribution.findOne({
-                userId,
-                groupId: group._id,
-                month: currentMonth,
-                status: "paid"
-            });
-
-            const allTimePaid = await Contribution.aggregate([{
-                    $match: {
-                        userId: user._id,
-                        groupId: group._id,
-                        status: "paid"
-                    }
-                },
-                {
-                    $group: {
-                        _id: null,
-                        total: { $sum: "$amount" }
-                    }
-                }
-            ]);
-
+                member ? member.monthlyContribution || 0 : 0;
+            const paidThisMonth = allContributions.find(
+                (c) =>
+                c.groupId.toString() ===
+                group._id.toString() &&
+                c.month === currentMonth &&
+                c.status === "paid"
+            );
+            const allTimePaid = allContributions
+                .filter(
+                    (c) =>
+                    c.groupId.toString() ===
+                    group._id.toString() &&
+                    c.status === "paid"
+                )
+                .reduce(
+                    (sum, item) => sum + item.amount,
+                    0
+                );
             if (paidThisMonth) {
-                totalPaidThisMonth += paidThisMonth.amount;
+                totalPaidThisMonth +=
+                    paidThisMonth.amount;
             } else {
-                pendingAmountThisMonth += monthlyContribution;
+                pendingAmountThisMonth +=
+                    monthlyContribution;
+
+                upcomingCollectionsThisMonth += 1;
             }
-
-            totalPaidAllTime += allTimePaid[0] ? allTimePaid[0].total || 0 : 0;
-
-            if (group.collectionDate) {
-                const collectionDate = new Date(group.collectionDate);
-
-                if (
-                    collectionDate.getMonth() === now.getMonth() &&
-                    collectionDate.getFullYear() === now.getFullYear()
-                ) {
-                    upcomingCollectionsThisMonth += 1;
-                }
-            }
+            totalPaidAllTime += allTimePaid;
+            const contributionDueToday =
+                now.getDate() ===
+                lastDateOfMonth.getDate();
 
             groupData.push({
                 groupId: group._id,
+
                 groupName: group.groupName,
-                totalMembers: group.members.filter((m) => m.status === "approved")
-                    .length,
-                joinedAt: member ? member.joinedAt : null,
+
+                totalMembers: group.members.filter(
+                    (m) => m.status === "approved"
+                ).length,
+
+                joinedAt: member ? member.joinedAt || null : null,
+
                 monthlyContribution,
-                nextCollectionDate: group.collectionDate || null,
-                contributionDueToday: group.collectionDate ?
-                    new Date(group.collectionDate).toDateString() === now.toDateString() : false
+
+                nextCollectionDate: lastDateOfMonth,
+
+                contributionDueToday
             });
         }
-
         const recentActivity = await Contribution.find({
                 userId,
                 status: "paid"
@@ -311,28 +324,42 @@ const getMemberHomeDashboard = async(req, res) => {
             .sort({ createdAt: -1 })
             .limit(5);
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Home dashboard fetched successfully",
+
             user: {
-                fullName: user.fullName,
+                fullName: user.fullName
             },
+
             groups: groupData,
+
             summary: {
                 totalPaidThisMonth,
                 pendingAmountThisMonth,
                 totalPaidAllTime,
                 upcomingCollectionsThisMonth
             },
-            recentActivity: recentActivity.map((item) => ({
-                type: "monthly_contribution",
-                title: "Monthly Contribution",
-                groupName: item.groupId ? item.groupId.groupName : null,
-                date: item.createdAt,
-                amount: item.amount
-            }))
+
+            recentActivity: recentActivity.map(
+                (item) => ({
+                    type: "monthly_contribution",
+
+                    title: "Monthly Contribution",
+
+                    groupName: item.groupId ?
+                        item.groupId.groupName : null,
+
+                    date: item.createdAt,
+
+                    amount: item.amount
+                })
+            )
         });
+
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return res.status(500).json({
+            message: error.message
+        });
     }
 };
 const getMemberProfile = async(req, res) => {
