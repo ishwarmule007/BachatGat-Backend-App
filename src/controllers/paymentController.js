@@ -1201,7 +1201,7 @@ const getRejectedPaymentRequestDetails =
         }
     };
 
-const getPaymentDashboard = async(req, res) => {
+const getMemberPaymentDashboard = async(req, res) => {
 
     try {
         const userId =
@@ -1410,5 +1410,6 @@ module.exports = {
     getPaymentRequestDetail,
     generateContributionPaymentLink,
     resubmitPaymentRequest,
-    getRejectedPaymentRequestDetails
+    getRejectedPaymentRequestDetails,
+    getMemberPaymentDashboard
 };

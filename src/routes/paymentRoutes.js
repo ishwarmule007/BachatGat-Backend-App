@@ -11,7 +11,8 @@ const {
     generateContributionPaymentLink,
     resubmitPaymentRequest,
     createPaymentRequest,
-    getRejectedPaymentRequestDetails
+    getRejectedPaymentRequestDetails,
+    getMemberPaymentDashboard
 } = require("../controllers/paymentController");
 const {
     getAdminPaymentDashboard
@@ -635,6 +636,135 @@ router.get(
     getAdminPaymentDashboard
 );
 
+/**
+ * @swagger
+ * /api/payments/member/dashboard:
+ *   get:
+ *     summary: Get member payment dashboard overview
+ *     tags: [Payment]
+ *     security:
+ *       - bearerAuth: []
+ *
+ *     responses:
+ *       200:
+ *         description: Member payment dashboard fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   example: "Dashboard fetched successfully"
+ *
+ *                 profile:
+ *                   type: object
+ *                   properties:
+ *
+ *                     fullName:
+ *                       type: string
+ *                       example: "Rahul Sharma"
+ *
+ *                     profilePhoto:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "https://example.com/profile.jpg"
+ *
+ *                 activeGroup:
+ *                   type: object
+ *                   nullable: true
+ *                   properties:
+ *
+ *                     groupId:
+ *                       type: string
+ *                       example: "665c1f9a2b7d8f1234567890"
+ *
+ *                     groupName:
+ *                       type: string
+ *                       example: "Shivneri Bachat Gat"
+ *
+ *                     monthlyContribution:
+ *                       type: number
+ *                       example: 500
+ *
+ *                     dueDate:
+ *                       type: string
+ *                       example: "10 May 2025"
+ *
+ *                 paymentSummary:
+ *                   type: object
+ *                   properties:
+ *
+ *                     totalPaidThisMonth:
+ *                       type: number
+ *                       example: 1500
+ *
+ *                     pendingAmount:
+ *                       type: number
+ *                       example: 500
+ *
+ *                     totalPaidAllTime:
+ *                       type: number
+ *                       example: 25000
+ *
+ *                 loanSummary:
+ *                   type: object
+ *                   properties:
+ *
+ *                     totalLoanTaken:
+ *                       type: number
+ *                       example: 10000
+ *
+ *                     totalLoanPaid:
+ *                       type: number
+ *                       example: 7000
+ *
+ *                     remainingLoanAmount:
+ *                       type: number
+ *                       example: 3000
+ *
+ *                 recentTransactions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *
+ *                       transactionId:
+ *                         type: string
+ *                         example: "665f7d89b1234567890abcd1"
+ *
+ *                       type:
+ *                         type: string
+ *                         example: "Monthly Contribution"
+ *
+ *                       amount:
+ *                         type: number
+ *                         example: 500
+ *
+ *                       status:
+ *                         type: string
+ *                         example: "paid"
+ *
+ *                       groupName:
+ *                         type: string
+ *                         example: "Shivneri Bachat Gat"
+ *
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *
+ *       401:
+ *         description: Unauthorized - Token missing or invalid
+ *
+ *       500:
+ *         description: Internal server error
+ */
+router.get(
+    "/member/dashboard",
+    authMiddleware,
+    getMemberPaymentDashboard
+);
 /**
  * @swagger
  * /api/payments/admin/requests/{requestId}:
