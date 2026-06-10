@@ -1201,6 +1201,207 @@ const getRejectedPaymentRequestDetails =
         }
     };
 
+const getPaymentDashboard = async(req, res) => {
+
+    try {
+        const userId =
+            req.user._id || req.user.id;
+        const user = await User.findById(userId)
+            .select(
+                "fullName profilePhoto"
+            );
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+        const group = await Group.findOne({
+            members: {
+                $elemMatch: {
+                    userId,
+                    status: "approved"
+                }
+            }
+        });
+
+        let activeGroup = null;
+
+        if (group) {
+
+            const member =
+                group.members.find(
+                    (m) =>
+                    m.userId.toString() ===
+                    userId.toString()
+                );
+
+            activeGroup = {
+                groupId: group._id,
+
+                groupName: group.groupName,
+
+                monthlyContribution: member ? member.monthlyContribution || 0 : 0,
+
+                dueDate: "10 May 2025"
+            };
+        }
+        const currentDate = new Date();
+
+        const currentMonthStart =
+            new Date(
+                currentDate.getFullYear(),
+                currentDate.getMonth(),
+                1
+            );
+        const paidThisMonthResult =
+            await Contribution.aggregate([{
+                    $match: {
+                        userId,
+                        status: "paid",
+                        createdAt: {
+                            $gte: currentMonthStart
+                        }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        total: {
+                            $sum: "$amount"
+                        }
+                    }
+                }
+            ]);
+
+        const totalPaidThisMonth =
+            paidThisMonthResult[0] ? paidThisMonthResult[0].total || 0 : 0;
+
+        const totalPaidAllTimeResult =
+            await Contribution.aggregate([{
+                    $match: {
+                        userId,
+                        status: "paid"
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        total: {
+                            $sum: "$amount"
+                        }
+                    }
+                }
+            ]);
+
+        const totalPaidAllTime =
+            totalPaidAllTimeResult[0] ? totalPaidAllTimeResult[0].total || 0 : 0;
+
+        const totalMonthlyContribution =
+            activeGroup ? activeGroup.monthlyContribution || 0 : 0;
+
+        const pendingAmount =
+            Math.max(
+                totalMonthlyContribution -
+                totalPaidThisMonth,
+                0
+            );
+        const loanSummaryResult =
+            await Loan.aggregate([{
+                    $match: {
+                        userId
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        totalLoanTaken: {
+                            $sum: "$loanAmount"
+                        },
+
+                        totalLoanPaid: {
+                            $sum: "$paidAmount"
+                        }
+                    }
+                }
+            ]);
+
+        const totalLoanTaken =
+            loanSummaryResult[0] ?
+            loanSummaryResult[0].totalLoanTaken || 0 : 0;
+
+        const totalLoanPaid =
+            loanSummaryResult[0] ?
+            loanSummaryResult[0].totalLoanPaid || 0 : 0;
+
+        const remainingLoanAmount =
+            totalLoanTaken -
+            totalLoanPaid;
+        const recentTransactions =
+            await Contribution.find({
+                userId,
+                createdAt: {
+                    $gte: currentMonthStart
+                }
+            })
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .populate(
+                "groupId",
+                "groupName"
+            );
+
+        const formattedTransactions =
+            recentTransactions.map(
+                (transaction) => ({
+                    transactionId: transaction._id,
+
+                    type: transaction.paymentType ||
+                        "Monthly Contribution",
+
+                    amount: transaction.amount,
+
+                    status: transaction.status,
+
+                    createdAt: transaction.createdAt,
+
+                    groupName: transaction.groupId ?
+                        transaction.groupId.groupName || null : null
+                })
+            );
+        return res.status(200).json({
+
+            message: "Dashboard fetched successfully",
+
+            profile: {
+                fullName: user.fullName,
+                profilePhoto: user.profilePhoto || null
+            },
+
+            activeGroup,
+
+            paymentSummary: {
+                totalPaidThisMonth,
+                pendingAmount,
+                totalPaidAllTime
+            },
+
+            loanSummary: {
+                totalLoanTaken,
+                totalLoanPaid,
+                remainingLoanAmount
+            },
+
+            recentTransactions: formattedTransactions
+        });
+
+    } catch (error) {
+
+        return res.status(500).json({
+            message: error.message
+        });
+    }
+};
 module.exports = {
     createPaymentRequest,
     updatePaymentRequestStatus,
