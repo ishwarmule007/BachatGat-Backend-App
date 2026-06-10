@@ -186,20 +186,8 @@ router.get(
  *                 message:
  *                   type: string
  *                   example: "Member profile fetched successfully"
+ *
  *                 profile:
- *                   type: object
- *                   properties:
- *                     name:
- *                       type: string
- *                       example: "Rahul Sharma"
- *                     status:
- *                       type: string
- *                       example: "approved"
- *                     memberId:
- *                       type: string
- *                       nullable: true
- *                       example: "MEM001"
- *                 personalInformation:
  *                   type: object
  *                   properties:
  *                     memberName:
@@ -215,6 +203,48 @@ router.get(
  *                     dateOfBirth:
  *                       type: string
  *                       format: date
+ *                       nullable: true
+ *
+ *                 groups:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       groupId:
+ *                         type: string
+ *                         example: "665f7d89b1234567890abcd1"
+ *                       groupName:
+ *                         type: string
+ *                         example: "Shivneri Bachat Gat"
+ *                       groupCode:
+ *                         type: string
+ *                         example: "SBG001"
+ *                       monthlyContribution:
+ *                         type: number
+ *                         example: 500
+ *                       joinedAt:
+ *                         type: string
+ *                         format: date-time
+ *                       status:
+ *                         type: string
+ *                         example: "approved"
+ *
+ *                 paymentSummary:
+ *                   type: object
+ *                   properties:
+ *                     totalPaidThisMonth:
+ *                       type: number
+ *                       example: 1500
+ *                     pendingAmount:
+ *                       type: number
+ *                       example: 500
+ *                     totalPaidAllTime:
+ *                       type: number
+ *                       example: 25000
+ *                     totalMonthlyContribution:
+ *                       type: number
+ *                       example: 2000
+ *
  *                 loanSummary:
  *                   type: object
  *                   properties:
@@ -230,14 +260,13 @@ router.get(
  *                     status:
  *                       type: string
  *                       example: "Keep going! You're doing great."
- *                 memberSince:
- *                   type: string
- *                   format: date-time
- *                   nullable: true
+ *
  *       401:
  *         description: Unauthorized - Token missing or invalid
+ *
  *       404:
  *         description: User not found
+ *
  *       500:
  *         description: Internal server error
  */
