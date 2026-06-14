@@ -50,9 +50,26 @@ const paymentRequestSchema = new mongoose.Schema({
     rejectionReason: {
         type: String
     },
+    resubmittedAt: {
+        type: Date
+    },
+
+    resubmissionCount: {
+        type: Number,
+        default: 0
+    },
     additionalComments: {
         type: String,
         default: ""
-    }
+    },
+    contributionAmount: {
+        type: Number,
+        default: 0
+    },
+
+    loanAmount: {
+        type: Number,
+        default: 0
+    },
 }, { timestamps: true });
 module.exports = mongoose.model("PaymentRequest", paymentRequestSchema);

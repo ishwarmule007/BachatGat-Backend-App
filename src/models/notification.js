@@ -25,16 +25,37 @@ const notificationSchema = new mongoose.Schema({
     type: {
         type: String,
         enum: [
+
+            // Member related
             "member_added",
             "member_request",
             "member_approved",
             "member_rejected",
             "announcement",
+            "invite_rejected",
+            "member_joined",
 
+            // Payment related
             "payment_request_received",
             "payment_request_sent",
             "payment_accepted",
-            "payment_rejected"
+            "payment_rejected",
+
+            // Loan related
+            "loan_request_sent",
+            "loan_proposal_sent",
+            "loan_proposal_rejected_by_admin",
+            "loan_proposal_accepted_by_member",
+            "loan_proposal_rejected_by_member",
+            "loan_created",
+            "loan_approved_for_member",
+
+            //Payment reminder related
+            "payment_reminder_10_days",
+            "payment_reminder_5_days",
+            "payment_reminder_1_day",
+            "payment_overdue_member",
+            "payment_overdue_admin"
         ],
         required: true
     },

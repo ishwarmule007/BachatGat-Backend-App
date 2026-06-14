@@ -15,7 +15,7 @@ const messageSchema = new mongoose.Schema({
 
     messageType: {
         type: String,
-        enum: ["text", "image", "file", "audio"],
+        enum: ["text", "image", "video", "audio"],
         default: "text"
     },
 
@@ -50,23 +50,9 @@ const messageSchema = new mongoose.Schema({
         default: null
     },
     replyTo: {
-        messageId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Message",
-            default: null
-        },
-        message: {
-            type: String,
-            default: ""
-        },
-        senderName: {
-            type: String,
-            default: ""
-        },
-        messageType: {
-            type: String,
-            default: "text"
-        }
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Message",
+        default: null
     },
     deletedAt: {
         type: Date,
@@ -87,6 +73,59 @@ const messageSchema = new mongoose.Schema({
             default: Date.now
         }
     }],
+    starredBy: [{
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        },
+        starredAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    mediaUrl: {
+        type: String,
+        default: ""
+    },
+
+    thumbnailUrl: {
+        type: String,
+        default: ""
+    },
+
+    cloudinaryPublicId: {
+        type: String,
+        default: ""
+    },
+    audioDuration: {
+        type: Number,
+        default: 0
+    },
+    mediaSize: {
+        type: Number,
+        default: 0
+    },
+
+    mediaDuration: {
+        type: Number,
+        default: 0
+    },
+
+    mediaExpiresAt: {
+        type: Date,
+        default: null
+    },
+
+    mediaExpiredAt: {
+        type: Date,
+        default: null
+    },
+
+    isMediaExpired: {
+        type: Boolean,
+        default: false
+    },
     readBy: [{
         userId: {
             type: mongoose.Schema.Types.ObjectId,

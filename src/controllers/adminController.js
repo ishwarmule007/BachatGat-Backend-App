@@ -15,9 +15,11 @@ const registerAdmin = async(req, res) => {
             mobileNumber,
             password,
             gender,
+            dateOfBirth,
+            address,
             loginType
         } = req.body;
-        if (!fullName || !mobileNumber || !gender || !loginType) {
+        if (!fullName || !mobileNumber || !gender || !loginType || !dateOfBirth || !address) {
             return res.status(400).json({
                 message: "Missing required fields"
             });
@@ -55,6 +57,8 @@ const registerAdmin = async(req, res) => {
             roleSelection: "admin",
             loginType,
             gender,
+            address,
+            dateOfBirth,
             groupIds: []
         });
 
@@ -202,7 +206,6 @@ const createGroup = async(req, res) => {
         const {
             groupName,
             groupCode,
-            groupDuration,
             startDate,
             description,
             village,
@@ -241,7 +244,6 @@ const createGroup = async(req, res) => {
         const newGroup = new Group({
             groupName,
             groupCode,
-            groupDuration,
             startDate,
             village,
             taluka,
@@ -255,11 +257,7 @@ const createGroup = async(req, res) => {
                 longitude: location.longitude
             },
             adminId: req.user._id,
-            members: [{
-                userId: req.user._id,
-                roleInGroup: "admin",
-                status: "approved"
-            }],
+            members: [],
             durationOfGroup: groupDurationInYears || 0
         });
         await newGroup.save();
@@ -341,6 +339,12 @@ const addMember = async(req, res) => {
             });
             await user.save();
             isNewUser = true;
+        } else {
+            if (user.fullName !== fullName || user.dateOfBirth.toISOString() !== new Date(dateOfBirth).toISOString()) {
+                return res.status(400).json({
+                    message: "Existing user details do not match with provided fullName and dateOfBirth"
+                });
+            }
         }
         const existingMember = group.members.find(
             m => m.userId.toString() === user._id.toString()
@@ -380,38 +384,39 @@ const addMember = async(req, res) => {
 const getAdminProfile = async(req, res) => {
     try {
         const adminId = req.user._id;
-        const admin = await User.findById(adminId).select(
-            "fullName mobileNumber roleSelection profilePicture upiId bankAccountDetails"
-        );
+        const groupIds = await Group.find({ adminId }).distinct("_id");
+        const [admin, groups, totalCollectionData] = await Promise.all([
+            User.findById(adminId).select(
+                "fullName mobileNumber roleSelection profilePicture upiId bankAccountDetails address dateOfBirth"
+            ),
+            Group.find({ _id: { $in: groupIds } }).select("members"),
+
+            Contribution.aggregate([{
+                    $match: {
+                        groupId: { $in: groupIds },
+                        status: "paid",
+                    },
+                },
+                {
+                    $group: {
+                        _id: null,
+                        total: { $sum: "$amount" },
+                    },
+                },
+            ]),
+        ]);
+
         if (!admin) {
             return res.status(404).json({
                 success: false,
                 message: "Admin not found",
             });
         }
-        const groups = await Group.find({
-            adminId,
-        });
-        const groupIds = groups.map(
-            (group) => group._id
-        );
-        let totalMembers = 0;
-        groups.forEach((group) => {
-            totalMembers +=
-                group.members ? group.members.length || 0 : 0;
-        });
-        const contributions =
-            await Contribution.find({
-                groupId: {
-                    $in: groupIds,
-                },
-                status: "paid",
-            });
-        let totalCollection = 0;
-        contributions.forEach((contribution) => {
-            totalCollection += contribution.amount;
-        });
-        res.status(200).json({
+
+        const totalMembers = groups.reduce((acc, group) => acc + (group.members ? group.members.length || 0 : 0), 0);
+        const totalCollection = totalCollectionData[0] ? totalCollectionData[0].total || 0 : 0;
+
+        return res.status(200).json({
             success: true,
             adminProfile: {
                 fullName: admin.fullName,
@@ -425,11 +430,13 @@ const getAdminProfile = async(req, res) => {
                     totalMembers,
                     totalCollection,
                 },
+                address: admin.address || null,
+                dateOfBirth: admin.dateOfBirth || null,
             },
         });
 
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: error.message,
         });
@@ -640,40 +647,49 @@ const getAdminPaymentDashboard = async(req, res) => {
 const removeMemberFromGroup = async(req, res) => {
     try {
         const adminId = req.user._id;
-        const { groupId, memberId } = req.params;
-
+        const {
+            groupCode,
+            memberId
+        } = req.params;
         const group = await Group.findOne({
-            _id: groupId,
+            groupCode,
             adminId,
         });
-
         if (!group) {
             return res.status(404).json({
                 message: "Group not found or you are not admin of this group",
             });
         }
+        const durationInYears =
+            group.durationOfGroup;
 
-        const durationInYears = group.durationOfGroup;
-
-        if (!durationInYears) {
+        if (
+            durationInYears === undefined ||
+            durationInYears === null
+        ) {
             return res.status(400).json({
                 message: "Group duration is not set for this group",
             });
         }
 
-        const groupEndDate = new Date(group.createdAt);
-        groupEndDate.setFullYear(groupEndDate.getFullYear() + durationInYears);
-
+        const groupEndDate =
+            new Date(group.createdAt);
+        groupEndDate.setFullYear(
+            groupEndDate.getFullYear() +
+            durationInYears
+        );
         if (new Date() < groupEndDate) {
+
             return res.status(400).json({
                 message: "Group duration is not completed yet",
+
                 groupEndDate,
             });
         }
-
         const member = group.members.find(
             (m) =>
-            m.userId.toString() === memberId &&
+            m.userId.toString() ===
+            memberId &&
             m.status === "approved"
         );
 
@@ -682,43 +698,37 @@ const removeMemberFromGroup = async(req, res) => {
                 message: "Approved member not found in this group",
             });
         }
-
-        const activeLoan = await Loan.findOne({
-            groupId,
-            userId: memberId,
-            $or: [{
-                    status: "pending",
-                },
-                {
-                    status: "approved",
-                    remainingAmount: { $gt: 0 },
-                },
-            ],
-        });
+        const activeLoan =
+            await Loan.findOne({
+                groupId: group._id,
+                userId: memberId,
+                $or: [{
+                        loanStatus: "ACTIVE",
+                    },
+                    {
+                        loanStatus: "OVERDUE",
+                    },
+                ],
+            });
 
         if (activeLoan) {
             return res.status(400).json({
                 message: "Member cannot be removed because loan is pending or remaining loan amount is not zero",
             });
         }
-
-        group.members = group.members.filter(
-            (m) => m.userId.toString() !== memberId
-        );
-
+        member.status = "removed";
+        member.removedAt = new Date();
         await group.save();
 
-        await User.findByIdAndUpdate(memberId, {
-            $pull: { groupIds: group._id },
-        });
-
-        res.status(200).json({
+        return res.status(200).json({
             message: "Member removed from group successfully",
             groupId: group._id,
             removedMemberId: memberId,
+            removedAt: member.removedAt
         });
+
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             message: error.message,
         });
     }
@@ -777,9 +787,73 @@ const getGroupsWithMembers = async(req, res) => {
         });
     }
 };
-
-const deleteGroupByAdmin = async(req, res) => {
+const editMemberByAdmin = async(req, res) => {
     try {
+        const adminId = req.user._id;
+        const { groupCode, memberId } = req.params;
+
+        const {
+            fullName,
+            mobileNumber,
+            dateOfBirth,
+            address
+        } = req.body;
+
+        const group = await Group.findOne({
+            groupCode,
+            adminId,
+            "members.userId": memberId
+        });
+
+        if (!group) {
+            return res.status(404).json({
+                message: "Member not found in your group"
+            });
+        }
+
+        const updateData = {};
+
+        if (fullName !== undefined) updateData.fullName = fullName;
+        if (mobileNumber !== undefined) updateData.mobileNumber = mobileNumber;
+        if (dateOfBirth !== undefined) updateData.dateOfBirth = dateOfBirth;
+        if (address !== undefined) updateData.address = address;
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({
+                message: "No valid field provided for update"
+            });
+        }
+
+        const updatedMember = await User.findByIdAndUpdate(
+            memberId,
+            updateData, {
+                new: true,
+                runValidators: true
+            }
+        ).select("fullName mobileNumber dateOfBirth address profilePicture roleSelection");
+
+        if (!updatedMember) {
+            return res.status(404).json({
+                message: "Member user not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Member information updated successfully",
+            member: updatedMember
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: error.message
+        });
+    }
+};
+const deleteGroupByAdmin = async(req, res) => {
+
+    try {
+
         const adminId = req.user._id;
         const { groupId } = req.params;
         const group = await Group.findOne({
@@ -792,30 +866,32 @@ const deleteGroupByAdmin = async(req, res) => {
                 message: "Group not found or unauthorized",
             });
         }
-        const activeLoan = await Loan.findOne({
-            groupId,
-            status: { $in: ["approved", "active"] },
-        });
+        const activeLoan =
+            await Loan.findOne({
+
+                groupId,
+
+                loanStatus: {
+                    $in: [
+                        "ACTIVE",
+                        "OVERDUE"
+                    ]
+                },
+            });
 
         if (activeLoan) {
             return res.status(400).json({
-                message: "Group cannot be deleted because active loan still exists",
+                message: "Group cannot be closed because active loan still exists",
             });
         }
-        await User.updateMany({
-            groupIds: groupId,
-        }, {
-            $pull: {
-                groupIds: groupId,
-            },
-        });
-
-        await Group.findByIdAndDelete(groupId);
-
+        group.groupStatus = "closed";
+        group.closedAt = new Date();
+        await group.save();
         return res.status(200).json({
-            message: "Group deleted successfully",
+            message: "Group closed successfully",
+            groupId: group._id,
+            closedAt: group.closedAt
         });
-
     } catch (error) {
         return res.status(500).json({
             message: error.message,
@@ -834,5 +910,10 @@ module.exports = {
     updateUpiId,
     removeMemberFromGroup,
     getGroupsWithMembers,
+    editMemberByAdmin,
+    deleteGroupByAdmin,
+    removeMemberFromGroup,
+    getGroupsWithMembers,
+    editMemberByAdmin,
     deleteGroupByAdmin
 };

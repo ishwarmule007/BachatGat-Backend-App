@@ -1,119 +1,1495 @@
-const Loan = require('../models/Loan');
-const Contribution = require('../models/contribution');
-const Group = require('../models/Group');
+/*const Loan = require("../models / Loan ");
+const Installment = require("../models/Installment");
+const Group = require("../models/Group");
+const User = require("../models/User");
+const PaymentRequest = require("../models/PaymentRequest");
+const LoanRequest = require("../models/loanRequest");
+const Notification = require("../models/notification");
+const requestLoan = async(
+    req,
+    res
+) => {
 
-exports.requestLoan = async(req, res) => {
-    const { groupCode, amount } = req.body;
-    if (!groupCode || !amount) {
-        return res.status(400).json({
-            message: "groupCode and amount are required"
-        });
-    }
-    const group = await Group.findOne({ groupCode });
-    if (!group.members.some(m => m.userId.toString() === req.user._id.toString())) {
-        return res.status(403).json({
-            message: "You are not part of this group"
-        });
-    }
-    if (!group) {
-        return res.status(404).json({
-            message: "Group not found"
-        });
-    }
-    const contributions = await Contribution.find({
-        userId: req.user._id,
-        groupId: group._id
-    });
-
-    const totalSaved = contributions.reduce((s, c) => s + c.amount, 0);
-
-
-    const loan = await Loan.create({
-        userId: req.user._id,
-        groupId: group._id,
-        amount,
-        reason,
-        status: "pending"
-    });
-
-    res.json({ message: "Loan requested", loan });
-};
-exports.getLoanRequests = async(req, res) => {
     try {
-        if (req.user.roleSelection !== "admin") {
-            return res.status(403).json({
-                message: "Only admin can view loan requests"
-            });
-        }
 
-        const loans = await Loan.find({ status: "pending" })
-            .populate("userId", "fullName mobileNumber")
-            .populate("groupId", "groupName groupCode");
+        const memberId =
+            req.user._id;
 
-        res.status(200).json(loans);
+        const {
+            groupId,
+            requestedAmount,
+            requestedDurationMonths,
+            purpose,
+            repaymentType
+        } = req.body;
 
-    } catch (error) {
-        res.status(500).json({
-            message: error.message
-        });
-    }
-};
-exports.updateLoanStatus = async(req, res) => {
-    try {
-        if (req.user.roleSelection !== "admin") {
-            return res.status(403).json({
-                message: "Only admin can update loan status"
-            });
-        }
-
-        const { loanId, status } = req.body;
-
-        if (!loanId || !status) {
+        if (!groupId ||
+            !requestedAmount ||
+            !requestedDurationMonths ||
+            !repaymentType
+        ) {
             return res.status(400).json({
-                message: "loanId and status are required"
+                success: false,
+                message: "Required fields missing"
             });
         }
 
-        if (!["approved", "rejected"].includes(status)) {
-            return res.status(400).json({
-                message: "Status must be approved or rejected"
-            });
-        }
+        const group =
+            await Group.findById(groupId);
 
-        const loan = await Loan.findById(loanId).populate("groupId");
-
-        if (!loan) {
+        if (!group) {
             return res.status(404).json({
-                message: "Loan not found"
+                success: false,
+                message: "Group not found"
             });
         }
 
-        // admin can only manage loans of own groups
-        if (!req.user.groupIds.some(id => id.toString() === loan.groupId._id.toString())) {
+        const member =
+            group.members.find(
+                m =>
+                m.userId.toString() ===
+                memberId.toString() &&
+                m.status === "approved"
+            );
+
+        if (!member) {
             return res.status(403).json({
-                message: "Not allowed to manage this loan"
+                success: false,
+                message: "You are not a member"
+            });
+        }
+        if (!member) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not a member"
             });
         }
 
-        loan.status = status;
+        if (!group.endDate) {
+            return res.status(400).json({
 
-        if (status === "approved") {
-            loan.remainingAmount = loan.amount;
-            loan.approvedAt = new Date();
-        } else {
-            loan.remainingAmount = 0;
-            loan.approvedAt = undefined;
+                success: false,
+
+                message: "Group end date is not configured"
+            });
         }
 
-        await loan.save();
+        const today =
+            new Date();
 
-        res.status(200).json({
-            message: `Loan ${status} successfully`
+        const loanEndDate =
+            new Date(today);
+
+        loanEndDate.setMonth(
+            loanEndDate.getMonth() +
+            Number(requestedDurationMonths)
+        );
+
+        if (loanEndDate > group.endDate) {
+
+            return res.status(400).json({
+
+                success: false,
+
+                message: "Loan duration exceeds group ending date"
+            });
+        }
+
+        const request =
+            await LoanRequest.create({
+
+                memberId,
+
+                groupId,
+
+                requestedAmount,
+
+                requestedDurationMonths,
+
+                purpose,
+
+                repaymentType
+            });
+
+        const adminMember =
+            group.members.find(
+                m => m.role === "admin"
+            );
+
+        const user =
+            await User.findById(memberId);
+
+        if (adminMember) {
+
+            await Notification.create({
+
+                userId: adminMember.userId,
+
+                groupId,
+
+                title: "New Loan Request",
+
+                message: `${user.fullName} requested a loan of ₹${requestedAmount}`,
+
+                type: "loan_request_sent"
+            });
+        }
+
+        return res.status(201).json({
+            success: true,
+            message: "Loan request submitted successfully",
+            request
         });
 
     } catch (error) {
-        res.status(500).json({
+
+        return res.status(500).json({
+            success: false,
             message: error.message
         });
     }
 };
+const getAllLoanRequests =
+    async(req, res) => {
+
+        try {
+
+            const adminId =
+                req.user._id;
+
+            const groups =
+                await Group.find({
+                    adminId
+                });
+
+            const groupIds =
+                groups.map(
+                    group => group._id
+                );
+
+            const requests =
+                await LoanRequest.find({
+
+                    groupId: {
+                        $in: groupIds
+                    }
+
+                })
+                .populate(
+                    "memberId",
+                    "fullName mobileNumber"
+                )
+                .populate(
+                    "groupId",
+                    "groupName groupCode"
+                )
+                .sort({
+                    createdAt: -1
+                });
+
+            return res.status(200).json({
+
+                success: true,
+
+                count: requests.length,
+
+                requests
+
+            });
+
+        } catch (error) {
+
+            console.error(error);
+
+            return res.status(500).json({
+
+                success: false,
+
+                message: error.message
+
+            });
+        }
+    };
+
+const getLoanRequestDetails =
+    async(req, res) => {
+
+        try {
+
+            const adminId =
+                req.user._id;
+
+            const { loanRequestId } =
+            req.params;
+
+            const request =
+                await LoanRequest.findById(
+                    loanRequestId
+                )
+                .populate(
+                    "memberId",
+                    `
+                fullName
+                mobileNumber
+                bankAccountDetails
+                address
+                `
+                )
+                .populate(
+                    "groupId",
+                    `
+                groupName
+                groupCode
+                adminId
+                `
+                );
+
+            if (!request) {
+                return res.status(404).json({
+
+                    success: false,
+
+                    message: "Loan request not found"
+                });
+            }
+
+            if (
+                request.groupId.adminId.toString() !==
+                adminId.toString()
+            ) {
+                return res.status(403).json({
+
+                    success: false,
+
+                    message: "Unauthorized access"
+                });
+            }
+
+            return res.status(200).json({
+
+                success: true,
+
+                request
+
+            });
+
+        } catch (error) {
+
+            console.error(error);
+
+            return res.status(500).json({
+
+                success: false,
+
+                message: error.message
+
+            });
+        }
+    };
+const sendLoanProposal =
+    async(req, res) => {
+
+        try {
+
+            const adminId =
+                req.user._id;
+
+            const {
+                loanRequestId,
+                approvedAmount,
+                repaymentType,
+                months,
+                proposalMessage
+            } = req.body;
+
+            const request =
+                await LoanRequest.findById(
+                    loanRequestId
+                );
+
+            if (!request) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Loan request not found"
+                });
+            }
+
+            const group =
+                await Group.findById(
+                    request.groupId
+                );
+
+            if (
+                group.adminId.toString() !==
+                adminId.toString()
+            ) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Unauthorized"
+                });
+            }
+
+            if (
+                request.requestStatus !==
+                "PENDING"
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Request already processed"
+                });
+            }
+
+            request.adminProposal = {
+
+                approvedAmount,
+
+                repaymentType,
+
+                months,
+
+                proposalMessage,
+
+                proposedAt: new Date()
+            };
+
+            request.requestStatus =
+                "PROPOSAL_SENT";
+
+            await request.save();
+            await Notification.create({
+
+                userId: request.memberId,
+
+                groupId: request.groupId,
+
+                title: "Loan Proposal Received",
+
+                message: `Admin sent you a loan proposal of ₹${approvedAmount}`,
+
+                type: "loan_proposal_sent"
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: "Proposal sent successfully",
+                request
+            });
+
+        } catch (error) {
+
+            return res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    };
+const rejectLoanProposalByAdmin =
+    async(req, res) => {
+
+        try {
+
+            const adminId =
+                req.user._id;
+
+            const {
+                loanRequestId,
+                rejectionReason
+            } = req.body;
+
+            if (!loanRequestId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Loan request id is required"
+                });
+            }
+
+            const request =
+                await LoanRequest.findById(
+                    loanRequestId
+                );
+
+            if (!request) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Loan request not found"
+                });
+            }
+
+            const group =
+                await Group.findById(
+                    request.groupId
+                );
+
+            if (!group) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Group not found"
+                });
+            }
+
+            if (
+                group.adminId.toString() !==
+                adminId.toString()
+            ) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Unauthorized access"
+                });
+            }
+
+            if (
+                request.requestStatus !==
+                "PENDING"
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Request already processed"
+                });
+            }
+
+            request.requestStatus =
+                "REJECTED";
+
+            request.rejectionReason =
+                rejectionReason || "";
+
+            await request.save();
+            await Notification.create({
+
+                userId: request.memberId,
+
+                groupId: request.groupId,
+
+                title: "Loan Request Rejected",
+
+                message: rejectionReason ?
+                    `Your loan request was rejected. Reason: ${rejectionReason}` : "Your loan request was rejected",
+
+                type: "loan_proposal_rejected_by_admin"
+            });
+            return res.status(200).json({
+                success: true,
+                message: "Loan request rejected successfully",
+                request
+            });
+
+        } catch (error) {
+
+            console.error(error);
+
+            return res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    };
+
+const acceptLoanProposal =
+    async(req, res) => {
+
+        try {
+
+            const memberId =
+                req.user._id;
+
+            const { loanRequestId } =
+            req.body;
+
+            if (!loanRequestId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Loan request id is required"
+                });
+            }
+
+            const request =
+                await LoanRequest.findById(
+                    loanRequestId
+                );
+
+            if (!request) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Loan request not found"
+                });
+            }
+
+            if (
+                request.memberId.toString() !==
+                memberId.toString()
+            ) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Unauthorized access"
+                });
+            }
+
+            if (
+                request.requestStatus !==
+                "PROPOSAL_SENT"
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Proposal not available"
+                });
+            }
+
+            request.requestStatus =
+                "ACCEPTED";
+
+            request.memberResponseAt =
+                new Date();
+
+            await request.save();
+            const group =
+                await Group.findById(
+                    request.groupId
+                );
+
+            await Notification.create({
+
+                userId: group.adminId,
+
+                groupId: request.groupId,
+
+                title: "Loan Proposal Accepted",
+
+                message: "Member accepted the loan proposal",
+
+                type: "loan_proposal_accepted_by_member"
+            });
+            return res.status(200).json({
+                success: true,
+                message: "Loan proposal accepted successfully",
+                request
+            });
+
+        } catch (error) {
+
+            console.error(error);
+
+            return res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    };
+
+const rejectLoanProposalbyMember =
+    async(req, res) => {
+
+        try {
+
+            const memberId =
+                req.user._id;
+
+            const { loanRequestId } =
+            req.body;
+
+            if (!loanRequestId) {
+                return res.status(400).json({
+
+                    success: false,
+
+                    message: "Loan request id is required"
+                });
+            }
+
+            const request =
+                await LoanRequest.findById(
+                    loanRequestId
+                );
+
+            if (!request) {
+                return res.status(404).json({
+
+                    success: false,
+
+                    message: "Loan request not found"
+                });
+            }
+
+            if (
+                request.memberId.toString() !==
+                memberId.toString()
+            ) {
+                return res.status(403).json({
+
+                    success: false,
+
+                    message: "Unauthorized access"
+                });
+            }
+
+            if (
+                request.requestStatus !==
+                "PROPOSAL_SENT"
+            ) {
+                return res.status(400).json({
+
+                    success: false,
+
+                    message: "Proposal not available"
+                });
+            }
+
+            request.requestStatus =
+                "REJECTED";
+
+            request.memberResponseAt =
+                new Date();
+
+            await request.save();
+
+            const group =
+                await Group.findById(
+                    request.groupId
+                );
+
+            await Notification.create({
+
+                userId: group.adminId,
+
+                groupId: request.groupId,
+
+                title: "Loan Proposal Rejected",
+
+                message: "Member rejected the loan proposal",
+
+                type: "loan_proposal_rejected_by_member"
+            });
+
+            return res.status(200).json({
+
+                success: true,
+
+                message: "Loan proposal rejected successfully",
+
+                request
+            });
+
+        } catch (error) {
+
+            console.error(error);
+
+            return res.status(500).json({
+
+                success: false,
+
+                message: error.message
+            });
+        }
+    };
+const getAcceptedLoanProposals =
+    async(req, res) => {
+
+        try {
+
+            const adminId =
+                req.user._id;
+
+            const groups =
+                await Group.find({
+                    adminId
+                });
+
+            const groupIds =
+                groups.map(
+                    group => group._id
+                );
+
+            const requests =
+                await LoanRequest.find({
+
+                    groupId: {
+                        $in: groupIds
+                    },
+
+                    requestStatus: "ACCEPTED"
+
+                })
+                .populate(
+                    "memberId",
+                    "fullName mobileNumber"
+                )
+                .populate(
+                    "groupId",
+                    "groupName groupCode"
+                )
+                .sort({
+                    updatedAt: -1
+                });
+
+            return res.status(200).json({
+
+                success: true,
+
+                count: requests.length,
+
+                requests
+
+            });
+
+        } catch (error) {
+
+            console.error(error);
+
+            return res.status(500).json({
+
+                success: false,
+
+                message: error.message
+
+            });
+        }
+    };
+const createLoan =
+    async(req, res) => {
+
+        try {
+
+            const adminId =
+                req.user._id;
+
+            const {
+                loanRequestId,
+                interestPercent,
+                penaltyPerDay
+            } = req.body;
+
+            if (!loanRequestId ||
+                interestPercent === undefined
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Required fields missing"
+                });
+            }
+
+            const request =
+                await LoanRequest.findById(
+                    loanRequestId
+                );
+
+            if (!request) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Loan request not found"
+                });
+            }
+
+            if (
+                request.requestStatus !==
+                "ACCEPTED"
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Proposal not accepted yet"
+                });
+            }
+
+            const group =
+                await Group.findById(
+                    request.groupId
+                );
+
+            if (!group) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Group not found"
+                });
+            }
+
+            if (
+                group.adminId.toString() !==
+                adminId.toString()
+            ) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Unauthorized access"
+                });
+            }
+
+            const proposal =
+                request.adminProposal;
+
+            const approvedAmount =
+                proposal.approvedAmount;
+
+            const months =
+                proposal.months;
+
+            const repaymentType =
+                proposal.repaymentType;
+
+            const interestAmount =
+                (approvedAmount *
+                    interestPercent) / 100;
+
+            const totalAmount =
+                approvedAmount +
+                interestAmount;
+
+            const monthlyEMI =
+                Number(
+                    (
+                        totalAmount / months
+                    ).toFixed(2)
+                );
+
+            const loanStartDate =
+                new Date();
+
+            const loanEndDate =
+                new Date(loanStartDate);
+
+            loanEndDate.setMonth(
+                loanEndDate.getMonth() +
+                months
+            );
+
+            const loan =
+                await Loan.create({
+
+                    loanNumber: "LN" + Date.now(),
+
+                    groupId: request.groupId,
+
+                    memberId: request.memberId,
+
+                    loanAmount: approvedAmount,
+
+                    interestPercent,
+
+                    interestAmount,
+
+                    totalAmount,
+
+                    months,
+
+                    repaymentType,
+
+                    monthlyEMI,
+
+                    penaltyPerDay: penaltyPerDay || 0,
+
+                    loanStartDate,
+
+                    loanEndDate,
+
+                    paidAmount: 0,
+
+                    remainingAmount: totalAmount,
+
+                    loanStatus: "ACTIVE",
+
+                    approvedBy: adminId
+                });
+
+            const originalDay =
+                loanStartDate.getDate();
+
+            for (
+                let i = 1; i <= months; i++
+            ) {
+
+                const dueDate =
+                    new Date(
+                        loanStartDate
+                    );
+
+                dueDate.setMonth(
+                    dueDate.getMonth() +
+                    (i - 1)
+                );
+
+                const lastDay =
+                    new Date(
+                        dueDate.getFullYear(),
+                        dueDate.getMonth() + 1,
+                        0
+                    ).getDate();
+
+                dueDate.setDate(
+                    Math.min(
+                        originalDay,
+                        lastDay
+                    )
+                );
+
+                await Installment.create({
+
+                    loanId: loan._id,
+
+                    installmentNumber: i,
+
+                    amount: monthlyEMI,
+
+                    dueDate
+                });
+            }
+
+            request.requestStatus =
+                "FINALIZED";
+
+            await request.save();
+            const borrower =
+                await User.findById(
+                    request.memberId
+                );
+
+            await Notification.create({
+
+                userId: request.memberId,
+
+                groupId: request.groupId,
+
+                title: "Loan Approved",
+
+                message: `Your loan of ₹${loan.loanAmount} has been approved and started`,
+
+                type: "loan_created"
+            });
+            const otherMembers =
+                group.members.filter(
+                    member =>
+                    member.status === "approved" &&
+                    member.userId.toString() !==
+                    request.memberId.toString()
+                );
+
+            const notifications =
+                otherMembers.map(member => ({
+
+                    userId: member.userId,
+
+                    groupId: request.groupId,
+
+                    title: "Loan Approved",
+
+                    message: `${borrower.fullName} received a loan of ₹${loan.loanAmount}`,
+
+                    type: "loan_approved_for_member"
+                }));
+
+            await Notification.insertMany(
+                notifications
+            );
+            return res.status(201).json({
+
+                success: true,
+
+                message: "Loan created successfully",
+
+                loan
+
+            });
+
+        } catch (error) {
+
+            console.error(error);
+
+            return res.status(500).json({
+
+                success: false,
+
+                message: error.message
+
+            });
+        }
+    };
+const getLoanDetailsByAdmin =
+    async(req, res) => {
+
+        try {
+
+            const adminId =
+                req.user._id;
+
+            const { loanId } =
+            req.params;
+
+            const loan =
+                await Loan.findById(
+                    loanId
+                )
+                .populate(
+                    "memberId",
+                    `
+                fullName
+                mobileNumber
+                bankAccountDetails
+                address
+                `
+                )
+                .populate(
+                    "groupId",
+                    `
+                groupName
+                groupCode
+                adminId
+                `
+                );
+
+            if (!loan) {
+                return res.status(404).json({
+
+                    success: false,
+
+                    message: "Loan not found"
+                });
+            }
+
+            if (
+                loan.groupId.adminId.toString() !==
+                adminId.toString()
+            ) {
+                return res.status(403).json({
+
+                    success: false,
+
+                    message: "Unauthorized access"
+                });
+            }
+
+            const installments =
+                await Installment.find({
+
+                    loanId: loan._id
+
+                }).sort({
+                    installmentNumber: 1
+                });
+
+            return res.status(200).json({
+
+                success: true,
+
+                loan,
+
+                installments
+
+            });
+
+        } catch (error) {
+
+            console.error(error);
+
+            return res.status(500).json({
+
+                success: false,
+
+                message: error.message
+
+            });
+        }
+    };
+const getLoanDetailsByMember =
+    async(req, res) => {
+
+        try {
+
+            const memberId =
+                req.user._id;
+
+            const { loanId } =
+            req.params;
+
+            const loan =
+                await Loan.findById(
+                    loanId
+                )
+                .populate(
+                    "groupId",
+                    `
+                groupName
+                groupCode
+                `
+                );
+
+            if (!loan) {
+                return res.status(404).json({
+
+                    success: false,
+
+                    message: "Loan not found"
+                });
+            }
+
+            if (
+                loan.memberId.toString() !==
+                memberId.toString()
+            ) {
+                return res.status(403).json({
+
+                    success: false,
+
+                    message: "Unauthorized access"
+                });
+            }
+
+            const installments =
+                await Installment.find({
+
+                    loanId: loan._id
+
+                }).sort({
+                    installmentNumber: 1
+                });
+
+            return res.status(200).json({
+
+                success: true,
+
+                loan,
+
+                installments
+
+            });
+
+        } catch (error) {
+
+            console.error(error);
+
+            return res.status(500).json({
+
+                success: false,
+
+                message: error.message
+
+            });
+        }
+    };
+const getMyLoans =
+    async(req, res) => {
+
+        try {
+
+            const memberId =
+                req.user._id;
+
+            const loans =
+                await Loan.find({
+
+                    memberId
+
+                })
+                .populate(
+                    "groupId",
+                    `
+                groupName
+                groupCode
+                `
+                )
+                .sort({
+                    createdAt: -1
+                });
+
+            return res.status(200).json({
+
+                success: true,
+
+                count: loans.length,
+
+                loans
+
+            });
+
+        } catch (error) {
+
+            console.error(error);
+
+            return res.status(500).json({
+
+                success: false,
+
+                message: error.message
+
+            });
+        }
+    };
+const getGroupLoans =
+    async(req, res) => {
+
+        try {
+
+            const userId =
+                req.user._id;
+
+            const { groupId } =
+            req.params;
+
+            const group =
+                await Group.findById(
+                    groupId
+                );
+
+            if (!group) {
+                return res.status(404).json({
+
+                    success: false,
+
+                    message: "Group not found"
+                });
+            }
+
+            const isAdmin =
+                group.adminId.toString() ===
+                userId.toString();
+
+            const isMember =
+                group.members.some(
+                    member =>
+                    member.userId.toString() ===
+                    userId.toString()
+                );
+
+            if (!isAdmin &&
+                !isMember
+            ) {
+                return res.status(403).json({
+
+                    success: false,
+
+                    message: "Unauthorized access"
+                });
+            }
+
+            const loans =
+                await Loan.find({
+
+                    groupId
+
+                })
+                .populate(
+                    "memberId",
+                    `
+                fullName
+                mobileNumber
+                `
+                )
+                .sort({
+                    createdAt: -1
+                });
+
+            return res.status(200).json({
+
+                success: true,
+
+                count: loans.length,
+
+                loans
+
+            });
+
+        } catch (error) {
+
+            console.error(error);
+
+            return res.status(500).json({
+
+                success: false,
+
+                message: error.message
+
+            });
+        }
+    };
+const getLoanRepaymentSchedule =
+    async(req, res) => {
+
+        try {
+
+            const memberId =
+                req.user._id;
+
+            const { loanId } =
+            req.params;
+
+            const loan =
+                await Loan.findById(
+                    loanId
+                );
+
+            if (!loan) {
+                return res.status(404).json({
+
+                    success: false,
+
+                    message: "Loan not found"
+                });
+            }
+
+            if (
+                loan.memberId.toString() !==
+                memberId.toString()
+            ) {
+                return res.status(403).json({
+
+                    success: false,
+
+                    message: "Unauthorized access"
+                });
+            }
+
+            const {
+                loanAmount,
+                interestPercent,
+                months,
+                repaymentType
+            } = loan;
+
+            const schedule = [];
+
+            if (
+                repaymentType ===
+                "INSTALLMENT"
+            ) {
+
+                const principalPerMonth =
+                    Number(
+                        (
+                            loanAmount /
+                            months
+                        ).toFixed(2)
+                    );
+
+                let remainingPrincipal =
+                    loanAmount;
+
+                for (
+                    let i = 1; i <= months; i++
+                ) {
+
+                    const interest =
+                        Number(
+                            (
+                                remainingPrincipal *
+                                interestPercent
+                            ) / 100
+                        );
+
+                    const total =
+                        Number(
+                            (
+                                principalPerMonth +
+                                interest
+                            ).toFixed(2)
+                        );
+                    const dueDate = new Date(startDate);
+
+                    dueDate.setMonth(startDate.getMonth() + i);
+
+                    dueDate.setDate(0);
+
+                    schedule.push({
+
+                        dueDate,
+
+                        principal: principalPerMonth,
+
+                        interest,
+
+                        installment: total,
+
+                        remainingPrincipal
+                    });
+
+                    remainingPrincipal -=
+                        principalPerMonth;
+                }
+
+            } else {
+
+                const monthlyInterest =
+                    Number(
+                        (
+                            loanAmount *
+                            interestPercent
+                        ) / 100
+                    );
+
+                for (
+                    let i = 1; i <= months; i++
+                ) {
+
+                    let principal = 0;
+
+                    if (i === months) {
+                        principal =
+                            loanAmount;
+                    }
+                    const dueDate = new Date(startDate);
+
+                    dueDate.setMonth(startDate.getMonth() + i);
+
+                    dueDate.setDate(0);
+                    const total =
+                        principal +
+                        monthlyInterest;
+
+                    schedule.push({
+
+                        dueDate,
+
+                        principal,
+
+                        interest: monthlyInterest,
+
+                        installment: total,
+
+                        remainingPrincipal: loanAmount
+                    });
+                }
+            }
+
+            return res.status(200).json({
+
+                success: true,
+
+                loan: {
+
+                    loanNumber: loan.loanNumber,
+
+                    loanAmount: loan.loanAmount,
+
+                    interestPercent: loan.interestPercent,
+
+                    months: loan.months,
+
+                    repaymentType: loan.repaymentType
+                },
+
+                schedule
+
+            });
+
+        } catch (error) {
+
+            console.error(error);
+
+            return res.status(500).json({
+
+                success: false,
+
+                message: error.message
+
+            });
+        }
+    };
+module.exports = {
+        requestLoan,
+        sendLoanProposal,
+        rejectLoanProposalByAdmin,
+        getLoanRepaymentSchedule,
+        getAllLoanRequests,
+        getLoanRequestDetails,
+        acceptLoanProposal,
+        rejectLoanProposalbyMember,
+        getAcceptedLoanProposals,
+        createLoan,
+        getLoanDetailsByAdmin,
+        getLoanDetailsByMember,
+        getMyLoans,
+        getGroupLoans,
+} */

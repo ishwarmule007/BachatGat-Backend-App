@@ -11,6 +11,7 @@ const {
     updateUpiId,
     removeMemberFromGroup,
     getGroupsWithMembers,
+    editMemberByAdmin,
     deleteGroupByAdmin
 } = require("../controllers/adminController");
 
@@ -89,6 +90,14 @@ router.post(
  *                     fullName:
  *                       type: string
  *                       example: "Atharv Saraf"
+ *                     address:
+ *                      type: string
+ *                      example: "Pune, Maharashtra"
+ * 
+ *                     dateOfBirth:
+ *                       type: string
+ *                       format: date
+ *                       example: "2002-05-15"
  *                     mobileNumber:
  *                       type: string
  *                       example: "9876543210"
@@ -302,50 +311,94 @@ router.patch(
  *             properties:
  *               groupName:
  *                 type: string
- *                 example: "Shivaji Bachat Gat"
+ *                 example: "Shree Ganesh Bachat Gat"
+ *
  *               groupCode:
  *                 type: string
  *                 example: "SBG-001"
- *               groupDuration:
- *                 type: string
- *                 example: "12 Months"
+ *
  *               startDate:
  *                 type: string
  *                 format: date
- *                 example: "2026-05-19"
+ *                 example: "2026-05-25"
+ *
  *               description:
  *                 type: string
- *                 example: "Women self-help savings group"
+ *                 example: "Women self help savings group"
+ *
  *               village:
  *                 type: string
- *                 example: "Shiamgir"
+ *                 example: "Khed"
+ *
  *               taluka:
  *                 type: string
- *                 example: "Nashik"
+ *                 example: "Haveli"
+ *
  *               district:
  *                 type: string
- *                 example: "Nashik"
+ *                 example: "Pune"
+ *
  *               state:
  *                 type: string
  *                 example: "Maharashtra"
+ *
  *               formationDate:
  *                 type: string
  *                 format: date
- *                 example: "2026-05-19"
+ *                 example: "2026-05-01"
+ *
  *               groupDurationInYears:
  *                 type: number
- *                 example: 2
+ *                 example: 5
+ *
  *     responses:
  *       201:
  *         description: Group created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Group created successfully"
+ *
+ *                 groupId:
+ *                   type: string
+ *                   example: "6852ab12cd34ef5678901234"
+ *
+ *                 groupName:
+ *                   type: string
+ *                   example: "Shree Ganesh Bachat Gat"
+ *
+ *                 groupCode:
+ *                   type: string
+ *                   example: "SBG-001"
+ *
  *       400:
- *         description: Missing required fields or group already exists
+ *         description: Validation error or duplicate group
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Group code already exists"
+ *
  *       401:
- *         description: Unauthorized - Token missing or invalid
- *       403:
- *         description: Access denied - Admin only
+ *         description: Unauthorized
+ *
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
  */
 router.post(
     "/create-group",
@@ -357,7 +410,10 @@ router.post(
  * @swagger
  * /api/admin/add-member:
  *   post:
- *     summary: Add member to a group
+ *     summary: Add a member to a group
+ *     description: |
+ *       Admin can add a new or existing user into a group with pending status.
+ *       If the user does not exist, a new account is created automatically.
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -378,35 +434,102 @@ router.post(
  *               groupCode:
  *                 type: string
  *                 example: "SBG-001"
+ *
  *               fullName:
  *                 type: string
  *                 example: "Rahul Sharma"
+ *
  *               mobileNumber:
  *                 type: string
  *                 example: "9876543210"
+ *
  *               dateOfBirth:
  *                 type: string
  *                 format: date
  *                 example: "2000-05-19"
+ *
  *               address:
  *                 type: string
  *                 example: "Nashik, Maharashtra"
+ *
  *               monthlyContributionAmount:
  *                 type: number
  *                 example: 500
+ *
  *     responses:
  *       200:
- *         description: Member added successfully and request sent
+ *         description: Member request sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "New member created and group request sent successfully"
+ *
+ *                 status:
+ *                   type: string
+ *                   example: "pending"
+ *
  *       400:
- *         description: Missing required fields or member already exists
+ *         description: Validation error or member already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   examples:
+ *                     missingFields:
+ *                       value: "groupCode, fullName, mobileNumber, dateOfBirth, address and monthlyContributionAmount are required"
+ *
+ *                     existingMember:
+ *                       value: "User already exists in this group with status: pending"
+ *
+ *                     mismatchDetails:
+ *                       value: "Existing user details do not match with provided fullName and dateOfBirth"
+ *
  *       401:
  *         description: Unauthorized - Token missing or invalid
+ *
  *       403:
- *         description: Access denied - Admin only
+ *         description: Forbidden - Only admin or authorized group admin can add members
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   examples:
+ *                     notAdmin:
+ *                       value: "Only Admin can add member"
+ *
+ *                     notAllowed:
+ *                       value: "You are not allowed to add members in this group"
+ *
  *       404:
  *         description: Group not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Group not found"
+ *
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  */
 router.post(
     "/add-member",
@@ -508,11 +631,12 @@ router.get(
 /**
  * @swagger
  * /api/admin/groups/{groupCode}/members/{memberId}:
- *   delete:
- *     summary: Remove member from group
+ *   patch:
+ *     summary: Edit member information by admin
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
+ *
  *     parameters:
  *       - in: path
  *         name: groupCode
@@ -520,31 +644,98 @@ router.get(
  *         schema:
  *           type: string
  *         example: "SBG-001"
+ *
  *       - in: path
  *         name: memberId
  *         required: true
  *         schema:
  *           type: string
  *         example: "665c1f9a2b7d8f1234567890"
+ *
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *                 example: "Rahul Sharma"
+ *
+ *               mobileNumber:
+ *                 type: string
+ *                 example: "9876543210"
+ *
+ *               dateofBirth:
+ *                 type: string
+ *                 format: date
+ *                 example: "2000-05-19"
+ *
+ *               address:
+ *                 type: string
+ *                 example: "Nashik, Maharashtra"
+ *
  *     responses:
  *       200:
- *         description: Member removed from group successfully
+ *         description: Member information updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Member information updated successfully"
+ *
+ *                 member:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "665c1f9a2b7d8f1234567890"
+ *
+ *                     fullName:
+ *                       type: string
+ *                       example: "Rahul Sharma"
+ *
+ *                     mobileNumber:
+ *                       type: string
+ *                       example: "9876543210"
+ *
+ *                     dateofBirth:
+ *                       type: string
+ *                       format: date
+ *                       example: "2000-05-19"
+ *
+ *                     address:
+ *                       type: string
+ *                       example: "Nashik, Maharashtra"
+ *
+ *                     roleSelection:
+ *                       type: string
+ *                       example: "user"
+ *
  *       400:
- *         description: Group duration not completed or active loan exists
+ *         description: No valid field provided for update
+ *
  *       401:
  *         description: Unauthorized - Token missing or invalid
+ *
  *       403:
  *         description: Access denied - Admin only
+ *
  *       404:
  *         description: Group or member not found
+ *
  *       500:
  *         description: Internal server error
  */
-router.delete(
+router.patch(
     "/groups/:groupCode/members/:memberId",
     authMiddleware,
     adminMiddleware,
-    removeMemberFromGroup
+    editMemberByAdmin
 );
 /**
  * @swagger
@@ -669,13 +860,82 @@ router.get(
     getGroupsWithMembers
 );
 /**
+ *@swagger
+ * /api/admin/groups/{groupCode}/members/{memberId}:
+ *   get:
+ *     summary: Get all groups with active and pending members
+ * components:
+ *   schemas:
+ *     EditMemberByAdminRequest:
+ *       type: object
+ *       properties:
+ *         fullName:
+ *           type: string
+ *           example: Rahul Sharma
+ *
+ *         mobileNumber:
+ *           type: string
+ *           example: "9876543210"
+ *
+ *         dateofBirth:
+ *           type: string
+ *           format: date
+ *           example: 2002-05-15
+ *
+ *         address:
+ *           type: string
+ *           example: Pune, Maharashtra
+ *
+ *     EditMemberByAdminResponse:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ *           example: Member information updated successfully
+ *
+ *         member:
+ *           type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *               example: 665f1a2b3c4d5e6f78901234
+ *
+ *             fullName:
+ *               type: string
+ *               example: Rahul Sharma
+ *
+ *             mobileNumber:
+ *               type: string
+ *               example: "9876543210"
+ *
+ *             dateofBirth:
+ *               type: string
+ *               format: date
+ *               example: 2002-05-15
+ *
+ *             address:
+ *               type: string
+ *               example: Pune, Maharashtra
+ *
+ *             roleSelection:
+ *               type: string
+ *               example: user
+ */
+router.patch(
+    "/groups/:groupCode/members/:memberId",
+    authMiddleware,
+    adminMiddleware,
+    editMemberByAdmin
+);
+/**
  * @swagger
  * /api/admin/groups/{groupId}:
  *   delete:
- *     summary: Delete group by admin if no active loan remains
+ *     summary: Close group by admin if no active loan remains
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
+ *
  *     parameters:
  *       - in: path
  *         name: groupId
@@ -683,17 +943,40 @@ router.get(
  *         schema:
  *           type: string
  *         description: MongoDB group ID
+ *
  *     responses:
  *       200:
- *         description: Group deleted successfully
+ *         description: Group closed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   example: "Group closed successfully"
+ *
+ *                 groupId:
+ *                   type: string
+ *                   example: "665c1f9a2b7d8f1234567890"
+ *
+ *                 closedAt:
+ *                   type: string
+ *                   format: date-time
+ *
  *       400:
- *         description: Group cannot be deleted because active loan still exists
+ *         description: Group cannot be closed because active loan still exists or group is already closed
+ *
  *       401:
  *         description: Unauthorized or token missing
+ *
  *       403:
  *         description: Admin access required
+ *
  *       404:
  *         description: Group not found or unauthorized
+ *
  *       500:
  *         description: Server error
  */
@@ -703,4 +986,123 @@ router.delete(
     adminMiddleware,
     deleteGroupByAdmin
 );
+/**
+ * @swagger
+ * /api/admin/groups/{groupCode}/members/{memberId}:
+ *   delete:
+ *     summary: Remove member from group
+ *     description: Only group admin can remove approved or pending members from the group.
+ *     tags: [Admin]
+ *
+ *     security:
+ *       - bearerAuth: []
+ *
+ *     parameters:
+ *       - in: path
+ *         name: groupCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "ATHARV-011"
+ *         description: Unique group code
+ *
+ *       - in: path
+ *         name: memberId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "6852b8f1f12c8a45a1234567"
+ *         description: User ID of member to remove
+ *
+ *     responses:
+ *
+ *       200:
+ *         description: Member removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   example: "Member removed successfully"
+ *
+ *       400:
+ *         description: Invalid request or admin removal attempt
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   examples:
+ *                     missingMemberId:
+ *                       value: "memberId is required"
+ *
+ *                     cannotRemoveAdmin:
+ *                       value: "Admin cannot remove himself"
+ *
+ *       401:
+ *         description: Unauthorized - Token missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *
+ *       403:
+ *         description: Only group admin can remove members
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   example: "Only admin can remove members"
+ *
+ *       404:
+ *         description: Group or member not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   examples:
+ *                     groupNotFound:
+ *                       value: "Group not found"
+ *
+ *                     memberNotFound:
+ *                       value: "Member not found in group"
+ *
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+router.delete(
+    "/groups/:groupCode/members/:memberId",
+    authMiddleware,
+    adminMiddleware,
+    removeMemberFromGroup
+);
+
 module.exports = router;

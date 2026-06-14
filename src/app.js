@@ -11,15 +11,18 @@ const commonRoutes = require('./routes/commonRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const notificationRoutes = require("./routes/notificationRoutes");
 const announcementRoutes = require("./routes/announcementRoutes");
+const locationRoutes = require("./routes/locationRoutes");
 app.use(cors());
 app.use(express.json());
 app.use("/api/common", commonRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/locations", locationRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/member", memberRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/notifications", notificationRoutes);
+//app.use("/api/loans", require("./routes/loanRoutes"));
 app.use("/api/announcements", announcementRoutes);
 app.get('/not_sleep', (req, res) => {
     res.status(200).json({ message: "Server is awake" });

@@ -125,6 +125,8 @@ const acceptGroupRequest = async(req, res) => {
         member.joinedAt = new Date();
 
         await group.save();
+        const user = await User.findById(userId);
+
         const approvedMembers = group.members.filter(
             member => member.status === "approved"
         );
@@ -138,11 +140,13 @@ const acceptGroupRequest = async(req, res) => {
         }));
 
         await createManyNotifications(notifications);
+
         res.status(200).json({
             message: "Group request accepted successfully",
             groupCode,
             status: "approved"
         });
+
     } catch (error) {
         res.status(500).json({
             message: "Failed to accept group request",
@@ -155,7 +159,7 @@ const rejectGroupRequest = async(req, res) => {
     try {
         const { groupCode } = req.body;
         const userId = req.user._id;
-
+        const user = await User.findById(userId).select("fullName");
         if (!groupCode) {
             return res.status(400).json({
                 message: "Group code is required"
@@ -189,13 +193,13 @@ const rejectGroupRequest = async(req, res) => {
         member.status = "rejected";
 
         await group.save();
-        await createNotification({
+        await createManyNotifications([{
             userId: group.adminId,
             groupId: group._id,
             title: "Invitation rejected",
             message: `${user.fullName} rejected the invitation for ${group.groupName}`,
             type: "invite_rejected"
-        });
+        }]);
         res.status(200).json({
             message: "Group request rejected successfully",
             groupCode,
@@ -213,22 +217,32 @@ const getMemberHomeDashboard = async(req, res) => {
         const userId = req.user._id || req.user.id;
 
         const user = await User.findById(userId).select(
-            "fullName  groupIds"
+            "fullName groupIds"
         );
 
         if (!user) {
-            return res.status(404).json({ message: "User not found" });
+            return res.status(404).json({
+                message: "User not found"
+            });
         }
-
         const groups = await Group.find({
-            "members.userId": userId,
-            "members.status": "approved"
+            members: {
+                $elemMatch: {
+                    userId,
+                    status: "approved"
+                }
+            }
         });
 
         const now = new Date();
         const currentMonth = `${now.getFullYear()}-${String(
-      now.getMonth() + 1
-    ).padStart(2, "0")}`;
+            now.getMonth() + 1
+        ).padStart(2, "0")}`;
+        const lastDateOfMonth = new Date(
+            now.getFullYear(),
+            now.getMonth() + 1,
+            0
+        );
 
         let totalPaidThisMonth = 0;
         let pendingAmountThisMonth = 0;
@@ -236,69 +250,68 @@ const getMemberHomeDashboard = async(req, res) => {
         let upcomingCollectionsThisMonth = 0;
 
         const groupData = [];
+        const allContributions = await Contribution.find({
+            userId
+        });
 
         for (const group of groups) {
             const member = group.members.find(
-                (m) => m.userId.toString() === userId.toString()
+                (m) =>
+                m.userId.toString() ===
+                userId.toString()
             );
-
             const monthlyContribution =
-                member ? group.members.find((m) => m.userId.toString() === userId.toString()).monthlyContributionAmount : group.monthlyContribution || 0;
-
-            const paidThisMonth = await Contribution.findOne({
-                userId,
-                groupId: group._id,
-                month: currentMonth,
-                status: "paid"
-            });
-
-            const allTimePaid = await Contribution.aggregate([{
-                    $match: {
-                        userId: user._id,
-                        groupId: group._id,
-                        status: "paid"
-                    }
-                },
-                {
-                    $group: {
-                        _id: null,
-                        total: { $sum: "$amount" }
-                    }
-                }
-            ]);
-
+                member ? member.monthlyContribution || 0 : 0;
+            const paidThisMonth = allContributions.find(
+                (c) =>
+                c.groupId.toString() ===
+                group._id.toString() &&
+                c.month === currentMonth &&
+                c.status === "paid"
+            );
+            const allTimePaid = allContributions
+                .filter(
+                    (c) =>
+                    c.groupId.toString() ===
+                    group._id.toString() &&
+                    c.status === "paid"
+                )
+                .reduce(
+                    (sum, item) => sum + item.amount,
+                    0
+                );
             if (paidThisMonth) {
-                totalPaidThisMonth += paidThisMonth.amount;
+                totalPaidThisMonth +=
+                    paidThisMonth.amount;
             } else {
-                pendingAmountThisMonth += monthlyContribution;
+                pendingAmountThisMonth +=
+                    monthlyContribution;
+
+                upcomingCollectionsThisMonth += 1;
             }
-
-            totalPaidAllTime += allTimePaid[0] ? allTimePaid[0].total || 0 : 0;
-
-            if (group.collectionDate) {
-                const collectionDate = new Date(group.collectionDate);
-
-                if (
-                    collectionDate.getMonth() === now.getMonth() &&
-                    collectionDate.getFullYear() === now.getFullYear()
-                ) {
-                    upcomingCollectionsThisMonth += 1;
-                }
-            }
+            totalPaidAllTime += allTimePaid;
+            const contributionDueToday =
+                now.getDate() ===
+                lastDateOfMonth.getDate();
 
             groupData.push({
                 groupId: group._id,
+
                 groupName: group.groupName,
-                totalMembers: group.members.filter((m) => m.status === "approved")
-                    .length,
-                joinedAt: member ? member.joinedAt : null,
+
+                totalMembers: group.members.filter(
+                    (m) => m.status === "approved"
+                ).length,
+
+                joinedAt: member ? member.joinedAt || null : null,
+
                 monthlyContribution,
-                nextCollectionDate: group.collectionDate || null,
-                contributionDueToday: group.collectionDate ?
-                    new Date(group.collectionDate).toDateString() === now.toDateString() : false
+
+                nextCollectionDate: lastDateOfMonth,
+
+                contributionDueToday
             });
         }
-
         const recentActivity = await Contribution.find({
                 userId,
                 status: "paid"
@@ -307,100 +320,269 @@ const getMemberHomeDashboard = async(req, res) => {
             .sort({ createdAt: -1 })
             .limit(5);
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Home dashboard fetched successfully",
+
             user: {
-                fullName: user.fullName,
+                fullName: user.fullName
             },
+
             groups: groupData,
+
             summary: {
                 totalPaidThisMonth,
                 pendingAmountThisMonth,
                 totalPaidAllTime,
                 upcomingCollectionsThisMonth
             },
-            recentActivity: recentActivity.map((item) => ({
-                type: "monthly_contribution",
-                title: "Monthly Contribution",
-                groupName: item.groupId ? item.groupId.groupName : null,
-                date: item.createdAt,
-                amount: item.amount
-            }))
+
+            recentActivity: recentActivity.map(
+                (item) => ({
+                    type: "monthly_contribution",
+
+                    title: "Monthly Contribution",
+
+                    groupName: item.groupId ?
+                        item.groupId.groupName : null,
+
+                    date: item.createdAt,
+
+                    amount: item.amount
+                })
+            )
         });
+
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return res.status(500).json({
+            message: error.message
+        });
     }
 };
 const getMemberProfile = async(req, res) => {
     try {
         const userId = req.user._id || req.user.id;
-
         const user = await User.findById(userId).select(
-            "fullName mobileNumber address dateofBirth  groupIds"
+            "fullName mobileNumber address dateOfBirth createdAt"
         );
-
         if (!user) {
             return res.status(404).json({
                 message: "User not found"
             });
         }
+        const groups = await Group.find({
+            members: {
+                $elemMatch: {
+                    userId,
+                    status: "approved"
+                }
+            }
+        }).select(
+            "groupName groupCode members"
+        );
 
-        const activeGroup = await Group.findOne({
-            "members.userId": userId,
-            "members.status": "approved"
-        }).select("groupName members");
+        const formattedGroups = groups.map((group) => {
 
-        const memberData = activeGroup ? activeGroup.members ? activeGroup.members.find(
-            (member) => member.userId.toString() === userId.toString()
-        ) : null : null;
+            const member = group.members.find(
+                (m) =>
+                m.userId.toString() ===
+                userId.toString()
+            );
 
+            return {
+                groupId: group._id,
+
+                groupName: group.groupName,
+
+                groupCode: group.groupCode,
+
+                monthlyContribution: member ? member.monthlyContribution || 0 : 0,
+
+                joinedAt: member ? member.joinedAt || null : null,
+
+                status: member ? member.status || null : null
+            };
+        });
+        const currentDate = new Date();
+        const currentMonthStart = new Date(
+            currentDate.getFullYear(),
+            currentDate.getMonth(),
+            1
+        );
+        const paidThisMonthResult =
+            await Contribution.aggregate([{
+                    $match: {
+                        userId,
+                        status: "paid",
+                        paymentDate: {
+                            $gte: currentMonthStart
+                        }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        total: {
+                            $sum: "$amount"
+                        }
+                    }
+                }
+            ]);
+
+        const totalPaidThisMonth =
+            paidThisMonthResult[0] ? paidThisMonthResult[0].total || 0 : 0;
+
+        const paidAllTimeResult =
+            await Contribution.aggregate([{
+                    $match: {
+                        userId,
+                        status: "paid"
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        total: {
+                            $sum: "$amount"
+                        }
+                    }
+                }
+            ]);
+
+        const totalPaidAllTime =
+            paidAllTimeResult[0] ? paid.total || 0 : 0;
+
+        const totalMonthlyContribution =
+            formattedGroups.reduce(
+                (sum, group) =>
+                sum + group.monthlyContribution,
+                0
+            );
+        const pendingAmount =
+            Math.max(
+                totalMonthlyContribution -
+                totalPaidThisMonth,
+                0
+            );
         const loanSummary = await Loan.aggregate([{
                 $match: {
-                    userId: user._id
+                    userId
                 }
             },
             {
                 $group: {
                     _id: null,
-                    loanTaken: { $sum: "$loanAmount" },
-                    loanPaid: { $sum: "$paidAmount" }
+                    loanTaken: {
+                        $sum: "$loanAmount"
+                    },
+                    loanPaid: {
+                        $sum: "$paidAmount"
+                    }
                 }
             }
         ]);
 
-        const loanTaken = loanSummary[0] ? loanSummary[0].loanTaken || 0 : 0;
-        const loanPaid = loanSummary[0] ? loanSummary[0].loanPaid || 0 : 0;
-        const remainingToPay = loanTaken - loanPaid;
+        const loanTaken =
+            loanSummary[0] ? loanSummary[0].loanTaken || 0 : 0;
 
-        res.status(200).json({
+        const loanPaid =
+            loanSummary[0] ? loanSummary[0].loanPaid || 0 : 0;
+
+        const remainingToPay =
+            loanTaken - loanPaid;
+        return res.status(200).json({
+
             message: "Member profile fetched successfully",
+
             profile: {
-                name: user.fullName,
-                status: memberData ? memberData.status : null,
-                memberId: memberData ? memberData.membershipId || null : null
-            },
-
-
-            personalInformation: {
                 memberName: user.fullName,
                 mobileNumber: user.mobileNumber,
                 address: user.address || null,
-                dateOfBirth: user.dateofBirth
+                dateOfBirth: user.dateOfBirth || null
             },
 
-            loanSummary: {
+            groups: formattedGroups,
+
+            paymentSummary: {
+                totalPaidThisMonth,
+                pendingAmount,
+                totalPaidAllTime,
+                totalMonthlyContribution
+            },
+
+            /*loanSummary: {
                 loanTaken,
                 loanPaid,
                 remainingToPay,
                 status: remainingToPay > 0 ?
                     "Keep going! You're doing great." : "No pending loan"
-            },
-
-            memberSince: memberData ? memberData.joinedAt || user.createdAt : null
-
+            }*/
         });
+
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
+            message: error.message
+        });
+    }
+};
+const leaveGroup = async(req, res) => {
+    try {
+        const { groupId } = req.body;
+        const userId = req.user._id;
+
+        if (!groupId) {
+            return res.status(400).json({
+                message: "Group ID is required"
+            });
+        }
+        const group = await Group.findById(groupId);
+
+        if (!group) {
+            return res.status(404).json({
+                message: "Group not found"
+            });
+        }
+
+        const member = group.members.find(
+            m =>
+            m.userId.toString() === userId.toString() &&
+            m.status === "approved"
+        );
+
+        if (!member) {
+            return res.status(404).json({
+                message: "You are not an approved member of this group"
+            });
+        }
+        const existingLoanApplication = await Loan.findOne({
+            groupId,
+            userId,
+            status: {
+                $in: [
+                    "pending",
+                    "approved",
+                    "active"
+                ]
+            }
+        });
+
+        if (existingLoanApplication) {
+            return res.status(400).json({
+                message: "You cannot leave the group while having an active loan application"
+            });
+        }
+        group.members = group.members.filter(
+            (member) =>
+            member.userId.toString() !== userId.toString()
+        );
+
+        await group.save();
+
+        return res.status(200).json({
+            message: "Left group successfully"
+        });
+
+    } catch (error) {
+        return res.status(500).json({
             message: error.message
         });
     }
@@ -411,5 +593,6 @@ module.exports = {
     rejectGroupRequest,
     getMemberHomeDashboard,
     getMemberProfile,
-    getRejectedPaymentDetail
+    getRejectedPaymentDetail,
+    leaveGroup
 };

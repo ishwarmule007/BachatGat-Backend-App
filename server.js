@@ -11,7 +11,9 @@ connectDB();
 const server = http.createServer(app);
 
 initializeSocket(server);
-
+const runPaymentReminderCron =
+    require("./src/utils/cron/paymentRemainderCron");
+runPaymentReminderCron();
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });

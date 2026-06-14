@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, starGroup, unstarGroup, archiveGroup, unarchiveGroup } = require("../controllers/commonController");
+const { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, archiveGroup, unarchiveGroup } = require("../controllers/commonController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
 
@@ -210,6 +210,7 @@ router.get(
  *     tags: [Common]
  *     security:
  *       - bearerAuth: []
+ *
  *     responses:
  *       200:
  *         description: Groups fetched successfully
@@ -218,46 +219,152 @@ router.get(
  *             schema:
  *               type: object
  *               properties:
+ *
  *                 message:
  *                   type: string
  *                   example: "Groups fetched successfully"
- *                 groups:
+ *
+ *                 activeGroups:
  *                   type: array
  *                   items:
  *                     type: object
  *                     properties:
+ *
  *                       groupId:
  *                         type: string
  *                         example: "665c1f9a2b7d8f1234567890"
+ *
  *                       groupName:
  *                         type: string
  *                         example: "Developer Group"
+ *
  *                       groupCode:
  *                         type: string
  *                         example: "SBG-001"
+ *
+ *                       unreadCount:
+ *                         type: integer
+ *                         example: 5
+ *
+ *                       lastSeenMessageId:
+ *                         type: string
+ *                         nullable: true
+ *                         example: "666d2f8a9c7e1f9876543210"
+ *
+ *                       isArchived:
+ *                         type: boolean
+ *                         example: false
+ *
  *                       totalMembers:
- *                         type: number
+ *                         type: integer
  *                         example: 12
+ *
  *                       totalSaving:
  *                         type: number
  *                         example: 50000
+ *
+ *                       totalLoanGiven:
+ *                         type: number
+ *                         example: 20000
+ *
  *                       formationDate:
  *                         type: string
  *                         format: date
- *                       location:
- *                         type: object
- *                         properties:
- *                           address:
- *                             type: string
- *                             example: "Ring road , hauz khas,south delhi, India"
- *                           latitude:
- *                             type: number
- *                             example: 19.9975
- *                           longitude:
- *                             type: number
- *                             example: 73.7898
+ *
+ *                       groupStatus:
+ *                         type: string
+ *                         enum: [active, closed]
+ *                         example: "active"
+ *
+ *                 removedGroups:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *
+ *                       groupId:
+ *                         type: string
+ *
+ *                       groupName:
+ *                         type: string
+ *
+ *                       groupCode:
+ *                         type: string
+ *
+ *                       unreadCount:
+ *                         type: integer
+ *
+ *                       lastSeenMessageId:
+ *                         type: string
+ *                         nullable: true
+ *
+ *                       isArchived:
+ *                         type: boolean
+ *
+ *                       totalMembers:
+ *                         type: integer
+ *
+ *                       totalSaving:
+ *                         type: number
+ *
+ *                       totalLoanGiven:
+ *                         type: number
+ *
+ *                       formationDate:
+ *                         type: string
+ *                         format: date
+ *
+ *                       groupStatus:
+ *                         type: string
+ *                         enum: [active, closed]
+ *                         example: "active"
+ *
+ *                 closedGroups:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *
+ *                       groupId:
+ *                         type: string
+ *
+ *                       groupName:
+ *                         type: string
+ *
+ *                       groupCode:
+ *                         type: string
+ *
+ *                       unreadCount:
+ *                         type: integer
+ *
+ *                       lastSeenMessageId:
+ *                         type: string
+ *                         nullable: true
+ *
+ *                       isArchived:
+ *                         type: boolean
+ *
+ *                       totalMembers:
+ *                         type: integer
+ *
+ *                       totalSaving:
+ *                         type: number
+ *
+ *                       totalLoanGiven:
+ *                         type: number
+ *
+ *                       formationDate:
+ *                         type: string
+ *                         format: date
+ *
+ *                       groupStatus:
+ *                         type: string
+ *                         enum: [active, closed]
+ *                         example: "closed"
+ *
  *       401:
  *         description: Unauthorized - Token missing or invalid
+ *
  *       500:
  *         description: Failed to fetch groups
  */
@@ -266,7 +373,6 @@ router.get(
     authMiddleware,
     getMyGroups
 );
-
 
 /**
  * @swagger
@@ -288,76 +394,6 @@ router.post(
     "/logout",
     authMiddleware,
     logoutUser
-);
-/**
- * @swagger
- * /api/common/groups/{groupId}/star:
- *   patch:
- *     summary: Star a group
- *     tags: [Common]
- *
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: groupId
- *         required: true
- *         schema:
- *           type: string
- *         description: Group ID
- *     responses:
- *       200:
- *         description: Group starred successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Group starred successfully
- *       500:
- *         description: Server error
- */
-router.patch(
-    "/groups/:groupId/star",
-    authMiddleware,
-    starGroup
-);
-
-/**
- * @swagger
- * /api/common/groups/{groupId}/unstar:
- *   patch:
- *     summary: Unstar a group
- *     tags: [Common]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: groupId
- *         required: true
- *         schema:
- *           type: string
- *         description: Group ID
- *     responses:
- *       200:
- *         description: Group unstarred successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Group unstarred successfully
- *       500:
- *         description: Server error
- */
-router.patch(
-    "/groups/:groupId/unstar",
-    authMiddleware,
-    unstarGroup
 );
 
 /**

@@ -45,7 +45,6 @@ const userSchema = new mongoose.Schema({
         },
         accountType: {
             type: String,
-            enum: ["savings", "current"],
             default: null
         },
         mobileNumberRegisteredWithBank: {
@@ -57,10 +56,7 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Group"
     }],
-    starredGroups: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Group",
-    }, ],
+
 
     archivedGroups: [{
         type: mongoose.Schema.Types.ObjectId,

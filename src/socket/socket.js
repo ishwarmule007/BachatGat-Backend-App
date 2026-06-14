@@ -1,6 +1,6 @@
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
-
+const mongoose = require("mongoose");
 const User = require("../models/User");
 const Group = require("../models/Group");
 const Message = require("../models/Message");
@@ -52,10 +52,11 @@ const initializeSocket = (server) => {
 
     io.on("connection", (socket) => {
         console.log("User connected:", socket.user.fullName);
-
         socket.on("joinGroup", async(data) => {
             try {
+
                 const groupCode = data && data.groupCode;
+
                 const cleanGroupCode = String(groupCode || "").trim();
 
                 if (!cleanGroupCode) {
@@ -73,123 +74,327 @@ const initializeSocket = (server) => {
                         message: "Group not found"
                     });
                 }
+                const userId = socket.user._id;
+                const isAdmin =
+                    group.adminId &&
+                    group.adminId.toString() === userId.toString();
 
-                const isApprovedMember = group.members.some(
+                const member = group.members.find(
                     (m) =>
                     m.userId &&
-                    m.userId.toString() === socket.user._id.toString() &&
-                    m.status === "approved"
+                    ((m.userId._id || m.userId).toString() === userId.toString())
                 );
-
-                if (!isApprovedMember) {
-                    return socket.emit("errorMessage", {
-                        message: "You are not approved member of this group"
-                    });
+                if (!isAdmin) {
+                    if (!member || member.status !== "approved") {
+                        return socket.emit("errorMessage", {
+                            message: "You are not approved member of this group"
+                        });
+                    }
                 }
 
                 socket.join(cleanGroupCode);
 
-                socket.emit("joinedGroup", {
-                    message: "Joined group chat successfully",
-                    groupCode: cleanGroupCode
+                socket.emit("groupJoined", {
+                    success: true,
+                    groupCode: cleanGroupCode,
+                    message: `Joined group ${cleanGroupCode}`
                 });
+
+                console.log(
+                    `${socket.user.fullName} joined ${cleanGroupCode}`
+                );
+
             } catch (error) {
+
                 socket.emit("errorMessage", {
                     message: error.message
                 });
             }
         });
-        socket.on("sendMessage", async(data) => {
-            try {
-                const groupCode = data && data.groupCode;
-                const message = data && data.message;
-                const messageType = data && data.messageType;
-                const replyTo = data && data.replyTo;
 
-                const cleanGroupCode = String(groupCode || "").trim();
+        const MAX_IMAGE_SIZE =
+            1 * 1024 * 1024;
 
-                if (!cleanGroupCode || !message) {
-                    return socket.emit("errorMessage", {
-                        message: "groupCode and message are required",
-                    });
-                }
+        const MAX_VIDEO_SIZE =
+            10 * 1024 * 1024;
 
-                const group = await Group.findOne({
-                    groupCode: cleanGroupCode,
-                });
+        const MAX_AUDIO_SIZE =
+            2 * 1024 * 1024;
 
-                if (!group) {
-                    return socket.emit("errorMessage", {
-                        message: "Group not found",
-                    });
-                }
+        socket.on(
+            "sendMessage",
+            async(data) => {
 
-                const isApprovedMember = group.members.some(
-                    (m) =>
-                    m.userId &&
-                    m.userId.toString() === socket.user._id.toString() &&
-                    m.status === "approved"
-                );
+                try {
 
-                if (!isApprovedMember) {
-                    return socket.emit("errorMessage", {
-                        message: "You are not approved member of this group",
-                    });
-                }
+                    const groupCode =
+                        data && data.groupCode;
 
-                let replyData = {
-                    messageId: null,
-                    message: "",
-                    senderName: "",
-                    messageType: "text",
-                };
+                    const message =
+                        data && data.message;
 
-                if (replyTo) {
-                    const oldMessage = await Message.findOne({
-                        _id: replyTo,
-                        groupId: group._id,
-                    }).populate("senderId", "fullName");
+                    const messageType =
+                        data && data.messageType;
 
-                    if (!oldMessage) {
-                        return socket.emit("errorMessage", {
-                            message: "Reply message not found in this group",
-                        });
+                    const mediaUrl =
+                        data && data.mediaUrl;
+
+                    const thumbnailUrl =
+                        data && data.thumbnailUrl;
+
+                    const cloudinaryPublicId =
+                        data &&
+                        data.cloudinaryPublicId;
+
+                    const mediaSize =
+                        data && data.mediaSize;
+
+                    const mediaDuration =
+                        data &&
+                        data.mediaDuration;
+
+                    const audioDuration =
+                        data &&
+                        data.audioDuration;
+
+                    const replyTo =
+                        data && data.replyTo;
+
+                    const cleanGroupCode =
+                        String(
+                            groupCode || ""
+                        ).trim();
+                    if (!cleanGroupCode) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "groupCode is required",
+                            }
+                        );
                     }
 
-                    replyData = {
-                        messageId: oldMessage._id,
-                        message: oldMessage.isDeleted ?
-                            "This message was deleted" : oldMessage.message,
-                        senderName: oldMessage.senderId ? oldMessage.senderId.fullName || "Unknown" : "Unknown",
-                        messageType: oldMessage.messageType || "text",
-                    };
+                    const allowedMessageTypes = [
+                        "text",
+                        "image",
+                        "video",
+                        "audio",
+                    ];
+
+                    if (
+                        messageType &&
+                        !allowedMessageTypes.includes(
+                            messageType
+                        )
+                    ) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "Invalid message type",
+                            }
+                        );
+                    }
+
+                    if (!message &&
+                        !mediaUrl
+                    ) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "message or mediaUrl is required",
+                            }
+                        );
+                    }
+                    if (
+                        messageType ===
+                        "image" &&
+                        mediaSize >
+                        MAX_IMAGE_SIZE
+                    ) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "Image size should be less than or equal to 1 MB",
+                            }
+                        );
+                    }
+                    if (
+                        messageType ===
+                        "video" &&
+                        mediaSize >
+                        MAX_VIDEO_SIZE
+                    ) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "Video size should be less than or equal to 10 MB",
+                            }
+                        );
+                    }
+                    if (
+                        messageType ===
+                        "audio" &&
+                        mediaSize >
+                        MAX_AUDIO_SIZE
+                    ) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "Audio size should be less than or equal to 2 MB",
+                            }
+                        );
+                    }
+                    const group =
+                        await Group.findOne({
+                            groupCode: cleanGroupCode,
+                        });
+
+                    if (!group) {
+
+                        return socket.emit(
+                            "errorMessage", {
+                                message: "Group not found",
+                            }
+                        );
+                    }
+                    const userId = socket.user._id;
+                    const isAdmin =
+                        group.adminId &&
+                        group.adminId.toString() === userId.toString();
+
+                    const member = group.members.find(
+                        (m) =>
+                        m.userId &&
+                        ((m.userId._id || m.userId).toString() === userId.toString())
+                    );
+                    if (!isAdmin) {
+                        if (!member || member.status !== "approved") {
+                            return socket.emit("errorMessage", {
+                                message: "You are not approved member of this group"
+                            });
+                        }
+                    }
+                    let repliedMessage = null;
+
+                    if (replyTo) {
+
+                        if (!mongoose.Types.ObjectId.isValid(replyTo)) {
+                            return socket.emit("errorMessage", {
+                                message: "Invalid reply message id"
+                            });
+                        }
+
+                        repliedMessage = await Message.findOne({
+                            _id: replyTo,
+                            groupId: group._id,
+                            isDeleted: false
+                        });
+
+                        if (!repliedMessage) {
+                            return socket.emit("errorMessage", {
+                                message: "Reply message not found in this group"
+                            });
+                        }
+                    }
+                    const mediaExpireDate =
+                        messageType ===
+                        "image" ||
+                        messageType ===
+                        "video" ||
+                        messageType ===
+                        "audio" ?
+                        new Date(
+                            Date.now() +
+                            7 *
+                            24 *
+                            60 *
+                            60 *
+                            1000
+                        ) :
+                        null;
+                    const newMessage =
+                        await Message.create({
+                            groupId: group._id,
+
+                            senderId: socket.user
+                                ._id,
+
+                            messageType: messageType ||
+                                "text",
+
+                            message: message || "",
+
+                            mediaUrl: mediaUrl || "",
+
+                            thumbnailUrl: thumbnailUrl ||
+                                "",
+
+                            cloudinaryPublicId: cloudinaryPublicId ||
+                                "",
+
+                            mediaSize: mediaSize || 0,
+
+                            mediaDuration: messageType ===
+                                "video" ?
+                                mediaDuration ||
+                                0 : 0,
+
+                            audioDuration: messageType ===
+                                "audio" ?
+                                audioDuration ||
+                                0 : 0,
+
+                            mediaExpiresAt: mediaExpireDate,
+
+                            replyTo: replyTo ||
+                                null,
+
+                            readBy: [{
+                                userId: socket
+                                    .user
+                                    ._id,
+                            }, ],
+                        });
+                    await Group.updateOne({ _id: group._id }, {
+                        $inc: {
+                            "members.$[elem].unreadCount": 1
+                        }
+                    }, {
+                        arrayFilters: [{
+                            "elem.userId": {
+                                $ne: socket.user._id
+                            },
+                            "elem.status": "approved"
+                        }]
+                    });
+                    const populatedMessage =
+                        await Message.findById(
+                            newMessage._id
+                        ).populate("senderId", "fullName mobileNumber roleSelection")
+                        .populate({
+                            path: "replyTo",
+                            select: "message messageType senderId createdAt",
+                            populate: {
+                                path: "senderId",
+                                select: "fullName mobileNumber roleSelection"
+                            }
+                        })
+                    io.to(
+                        cleanGroupCode
+                    ).emit(
+                        "receiveMessage",
+                        populatedMessage
+                    );
+
+                } catch (error) {
+
+                    socket.emit(
+                        "errorMessage", {
+                            message: error.message,
+                        }
+                    );
                 }
-
-                const newMessage = await Message.create({
-                    groupId: group._id,
-                    senderId: socket.user._id,
-                    messageType: messageType || "text",
-                    message,
-                    replyTo: replyData,
-                    readBy: [{
-                        userId: socket.user._id,
-                    }, ],
-                });
-
-                const populatedMessage = await Message.findById(newMessage._id).populate(
-                    "senderId",
-                    "fullName mobileNumber roleSelection"
-                );
-
-                socket.join(cleanGroupCode);
-
-                io.to(cleanGroupCode).emit("receiveMessage", populatedMessage);
-            } catch (error) {
-                socket.emit("errorMessage", {
-                    message: error.message,
-                });
             }
-        });
+        );
 
         socket.on("deleteMessage", async(data) => {
             try {
@@ -217,25 +422,26 @@ const initializeSocket = (server) => {
                     });
                 }
 
-                const isApprovedMember = group.members.some(
+                const userId = socket.user._id;
+                const isAdmin =
+                    group.adminId &&
+                    group.adminId.toString() === userId.toString();
+
+                const member = group.members.find(
                     (m) =>
                     m.userId &&
-                    m.userId.toString() === socket.user._id.toString() &&
-                    m.status === "approved"
+                    ((m.userId._id || m.userId).toString() === userId.toString())
                 );
-
-                if (!isApprovedMember) {
-                    return socket.emit("errorMessage", {
-                        message: "You are not approved member of this group"
-                    });
+                if (!isAdmin) {
+                    if (!member || member.status !== "approved") {
+                        return socket.emit("errorMessage", {
+                            message: "You are not approved member of this group"
+                        });
+                    }
                 }
 
                 const isOwnMessage =
                     message.senderId.toString() === socket.user._id.toString();
-
-                const isAdmin =
-                    group.adminId &&
-                    group.adminId.toString() === socket.user._id.toString();
 
                 if (!isOwnMessage && !isAdmin) {
                     return socket.emit("errorMessage", {
@@ -400,19 +606,23 @@ const initializeSocket = (server) => {
                     });
                 }
 
-                const isApprovedMember = group.members.some(
+                const userId = socket.user._id;
+                const isAdmin =
+                    group.adminId &&
+                    group.adminId.toString() === userId.toString();
+
+                const member = group.members.find(
                     (m) =>
                     m.userId &&
-                    m.userId.toString() === socket.user._id.toString() &&
-                    m.status === "approved"
+                    ((m.userId._id || m.userId).toString() === userId.toString())
                 );
-
-                if (!isApprovedMember) {
-                    return socket.emit("errorMessage", {
-                        message: "You are not approved member of this group"
-                    });
+                if (!isAdmin) {
+                    if (!member || member.status !== "approved") {
+                        return socket.emit("errorMessage", {
+                            message: "You are not approved member of this group"
+                        });
+                    }
                 }
-
                 const existingReactionIndex = message.reactions.findIndex(
                     (reaction) =>
                     reaction.userId.toString() === socket.user._id.toString()
@@ -471,17 +681,29 @@ const initializeSocket = (server) => {
                     });
                 }
 
-                const isApprovedMember = group.members.some(
+                const userId = socket.user._id;
+                const isAdmin =
+                    group.adminId &&
+                    group.adminId.toString() === userId.toString();
+
+                const member = group.members.find(
                     (m) =>
                     m.userId &&
-                    m.userId.toString() === socket.user._id.toString() &&
-                    m.status === "approved"
+                    ((m.userId._id || m.userId).toString() === userId.toString())
                 );
-
-                if (!isApprovedMember) {
-                    return socket.emit("errorMessage", {
-                        message: "You are not approved member of this group"
-                    });
+                if (!isAdmin) {
+                    if (!member || member.status !== "approved") {
+                        return socket.emit("errorMessage", {
+                            message: "You are not approved member of this group"
+                        });
+                    }
+                }
+                if (!isAdmin) {
+                    if (!member || member.status !== "approved") {
+                        return socket.emit("errorMessage", {
+                            message: "You are not approved member of this group"
+                        });
+                    }
                 }
 
                 message.reactions = message.reactions.filter(
@@ -498,6 +720,135 @@ const initializeSocket = (server) => {
                     groupCode: group.groupCode,
                     messageId: message._id,
                     reactions: updatedMessage.reactions
+                });
+            } catch (error) {
+                socket.emit("errorMessage", {
+                    message: error.message
+                });
+            }
+        });
+        socket.on("starMessage", async(data) => {
+            try {
+                const messageId = data && data.messageId;
+
+                if (!messageId) {
+                    return socket.emit("errorMessage", {
+                        message: "messageId is required"
+                    });
+                }
+
+                const message = await Message.findById(messageId);
+
+                if (!message) {
+                    return socket.emit("errorMessage", {
+                        message: "Message not found"
+                    });
+                }
+
+                const group = await Group.findById(message.groupId);
+
+                if (!group) {
+                    return socket.emit("errorMessage", {
+                        message: "Group not found"
+                    });
+                }
+
+                const userId = socket.user._id;
+                const isAdmin =
+                    group.adminId &&
+                    group.adminId.toString() === userId.toString();
+
+                const member = group.members.find(
+                    (m) =>
+                    m.userId &&
+                    ((m.userId._id || m.userId).toString() === userId.toString())
+                );
+                if (!isAdmin) {
+                    if (!member || member.status !== "approved") {
+                        return socket.emit("errorMessage", {
+                            message: "You are not approved member of this group"
+                        });
+                    }
+                }
+
+                const alreadyStarred = message.starredBy.some(
+                    (star) => star.userId.toString() === socket.user._id.toString()
+                );
+
+                if (!alreadyStarred) {
+                    message.starredBy.push({
+                        userId: socket.user._id
+                    });
+
+                    await message.save();
+                }
+
+                socket.emit("messageStarred", {
+                    groupCode: group.groupCode,
+                    messageId: message._id,
+                    starredBy: socket.user._id,
+                    starredAt: new Date()
+                });
+            } catch (error) {
+                socket.emit("errorMessage", {
+                    message: error.message
+                });
+            }
+        });
+        socket.on("unstarMessage", async(data) => {
+            try {
+                const messageId = data && data.messageId;
+
+                if (!messageId) {
+                    return socket.emit("errorMessage", {
+                        message: "messageId is required"
+                    });
+                }
+
+                const message = await Message.findById(messageId);
+
+                if (!message) {
+                    return socket.emit("errorMessage", {
+                        message: "Message not found"
+                    });
+                }
+
+                const group = await Group.findById(message.groupId);
+
+                if (!group) {
+                    return socket.emit("errorMessage", {
+                        message: "Group not found"
+                    });
+                }
+
+                const userId = socket.user._id;
+                const isAdmin =
+                    group.adminId &&
+                    group.adminId.toString() === userId.toString();
+
+                const member = group.members.find(
+                    (m) =>
+                    m.userId &&
+                    ((m.userId._id || m.userId).toString() === userId.toString())
+                );
+                if (!isAdmin) {
+                    if (!member || member.status !== "approved") {
+                        return socket.emit("errorMessage", {
+                            message: "You are not approved member of this group"
+                        });
+                    }
+                }
+
+                message.starredBy = message.starredBy.filter(
+                    (star) => star.userId.toString() !== socket.user._id.toString()
+                );
+
+                await message.save();
+
+                socket.emit("messageUnstarred", {
+                    groupCode: group.groupCode,
+                    messageId: message._id,
+                    unstarredBy: socket.user._id
                 });
             } catch (error) {
                 socket.emit("errorMessage", {

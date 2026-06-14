@@ -75,31 +75,50 @@ const getGroupMembers = async(req, res) => {
 const getGroupDetails = async(req, res) => {
     try {
         const { groupCode } = req.params;
-        const group = await Group.findOne({ groupCode }).populate(
-            "members.userId",
-            "fullName mobileNumber gender role"
-        );
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+
+        const group = await Group.findOne({ groupCode })
+            .populate("members.userId", "fullName mobileNumber gender role");
+
         if (!group) {
             return res.status(404).json({
                 message: "Group not found"
             });
         }
-        const member = group.members.find((m) => m.userId && m.userId._id.toString() === req.user._id.toString());
-        if (!member || member.status !== "approved") {
-            return res.status(403).json({
-                message: "You are not approved member of this group"
-            });
+
+        let isAdmin = false;
+
+        if (user.roleSelection === "admin") {
+            isAdmin = group.adminId && group.adminId.toString() === userId.toString();
         }
+        const member = group.members.find(
+            (m) =>
+            m.userId &&
+            m.userId._id.toString() === userId.toString()
+        );
+        if (!isAdmin) {
+            if (!member || member.status !== "approved") {
+                return res.status(403).json({
+                    message: "You are not approved member of this group"
+                });
+            }
+        }
+
         const approvedMembers = group.members.filter(
-            (member) => member.status === "approved"
+            (m) => m.status === "approved"
         );
+
         const pendingMembers = group.members.filter(
-            (member) => member.status === "pending"
+            (m) => m.status === "pending"
         );
+
         const rejectedMembers = group.members.filter(
-            (member) => member.status === "rejected"
+            (m) => m.status === "rejected"
         );
-        res.status(200).json({
+
+        return res.status(200).json({
             message: "Group details fetched successfully",
             group: {
                 groupId: group._id,
@@ -108,7 +127,7 @@ const getGroupDetails = async(req, res) => {
                 description: group.description,
                 formationDate: group.formationDate,
                 totalSaving: group.totalSaving || 0,
-                totalLoanGiven: group.totalLoanGiven || 0,
+                //totalLoanGiven: group.totalLoanGiven || 0,
                 totalMembers: approvedMembers.length,
                 pendingMembers: pendingMembers.length,
                 rejectedMembers: rejectedMembers.length,
@@ -122,52 +141,108 @@ const getGroupDetails = async(req, res) => {
                     longitude: group.location ? group.location.longitude : null
                 },
                 audioCall: true,
-                videoCall: true
+                videoCall: true,
+
             }
         });
+
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             message: "Failed to fetch group details",
             error: error.message
         });
     }
 };
 const getMyGroups = async(req, res) => {
+
     try {
         const userId = req.user._id;
+        const user = await User.findById(userId);
+        let groups = [];
+        if (user.roleSelection === "admin") {
+            groups = await Group.find({
+                adminId: userId
+            });
+        } else {
+            groups = await Group.find({
+                "members.userId": userId
+            });
+        }
+        const activeGroups = [];
+        const removedGroups = [];
+        const closedGroups = [];
+        groups.forEach((group) => {
 
-        const groups = await Group.find({
-            $or: [
-                { adminId: userId },
-                { "members.userId": userId }
-            ]
-        }).sort({ createdAt: -1 });
+            const myMember =
+                group.members.find(
+                    (member) =>
+                    member.userId.toString() ===
+                    userId.toString()
+                );
 
-        const formattedGroups = groups.map((group) => {
-            const approvedMembers = group.members.filter(
-                (member) => member.status === "approved"
-            );
-
-            return {
+            const formattedGroup = {
                 groupId: group._id,
                 groupName: group.groupName,
                 groupCode: group.groupCode,
-                totalMembers: approvedMembers.length,
-                totalSaving: group.totalSaving || 0,
+                unreadCount: myMember ?
+                    myMember.unreadCount || 0 : 0,
+                lastSeenMessageId: myMember ?
+                    myMember.lastSeenMessageId || null : null,
+                isArchived: user.archivedGroups.some(
+                    (id) =>
+                    id.toString() ===
+                    group._id.toString()
+                ),
                 formationDate: group.formationDate,
-                location: group.location
-            };
-        });
+                totalSaving: group.totalSaving || 0,
+                //totalLoanGiven: group.totalLoanGiven || 0,
+                totalMembers: group.members.filter(
+                    (member) =>
+                    member.status ===
+                    "approved"
+                ).length,
 
-        res.status(200).json({
+                groupStatus: group.groupStatus || "active"
+            };
+            if (
+                group.groupStatus ===
+                "closed"
+            ) {
+                closedGroups.push(
+                    formattedGroup
+                );
+                return;
+            }
+            if (
+                myMember &&
+                myMember.status ===
+                "removed"
+            ) {
+                removedGroups.push(
+                    formattedGroup
+                );
+                return;
+            }
+            if (
+                myMember &&
+                myMember.status ===
+                "approved"
+            ) {
+                activeGroups.push(
+                    formattedGroup
+                );
+            }
+        });
+        return res.status(200).json({
             message: "Groups fetched successfully",
-            groups: formattedGroups
+            activeGroups,
+            removedGroups,
+            closedGroups
         });
 
     } catch (error) {
-        res.status(500).json({
-            message: "Failed to fetch groups",
-            error: error.message
+        return res.status(500).json({
+            message: error.message
         });
     }
 };
@@ -185,38 +260,6 @@ const logoutUser = async(req, res) => {
             message: "Logout failed",
             error: error.message
         });
-    }
-};
-const starGroup = async(req, res) => {
-    try {
-        const userId = req.user._id;
-        const { groupId } = req.params;
-
-        await User.findByIdAndUpdate(userId, {
-            $addToSet: { starredGroups: groupId },
-        });
-
-        res.status(200).json({
-            message: "Group starred successfully",
-        });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-const unstarGroup = async(req, res) => {
-    try {
-        const userId = req.user._id;
-        const { groupId } = req.params;
-
-        await User.findByIdAndUpdate(userId, {
-            $pull: { starredGroups: groupId },
-        });
-
-        res.status(200).json({
-            message: "Group unstarred successfully",
-        });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
     }
 };
 const archiveGroup = async(req, res) => {
@@ -252,4 +295,4 @@ const unarchiveGroup = async(req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-module.exports = { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, starGroup, unstarGroup, archiveGroup, unarchiveGroup };
+module.exports = { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, archiveGroup, unarchiveGroup };

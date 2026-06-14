@@ -33,6 +33,15 @@ const groupSchema = new mongoose.Schema({
             type: Number
         }
     },
+    durationOfGroup: {
+        type: Number,
+        default: 0
+    },
+    groupStatus: {
+        type: String,
+        enum: ["active", "closed"],
+        default: "active"
+    },
     adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     members: [{
         userId: {
@@ -54,7 +63,12 @@ const groupSchema = new mongoose.Schema({
 
         status: {
             type: String,
-            enum: ["pending", "approved", "rejected"],
+            enum: [
+                "pending",
+                "approved",
+                "rejected",
+                "removed"
+            ],
             default: "pending"
         },
 
@@ -67,7 +81,16 @@ const groupSchema = new mongoose.Schema({
             type: Date,
             default: Date.now
         },
-        durationOfGroup: {
+        lastSeenMessageId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Message",
+            default: null
+        },
+        removedAt: {
+            type: Date,
+            default: null
+        },
+        unreadCount: {
             type: Number,
             default: 0
         }
