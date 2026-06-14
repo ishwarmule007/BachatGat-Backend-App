@@ -526,10 +526,10 @@ const getMemberPaymentHistory =
                     },
 
                     contributionAmount: payment.contributionAmount || 0,
-                    loanAmount: payment.loanAmount || 0,
-                    totalAmount: payment.amount || 0,
-                    installmentCount: payment.installmentIds ? payment.installmentIds.length || 0 : 0,
-                    installments: payment.installmentIds || [],
+                    //loanAmount: payment.loanAmount || 0,
+                    //totalAmount: payment.amount || 0,
+                    //installmentCount: payment.installmentIds ? payment.installmentIds.length || 0 : 0,
+                    //installments: payment.installmentIds || [],
                     month: payment.month,
                     upiId: payment.upiId,
                     screenshotUrl: payment.screenshotUrl,
@@ -777,19 +777,19 @@ const getPaymentRequestDetail =
 
                     paymentBreakdown: {
                         contributionAmount: request.contributionAmount || 0,
-                        loanAmount: request.loanAmount || 0,
+                        //loanAmount: request.loanAmount || 0,
                         totalAmount: request.amount || 0,
                         installmentCount: request.installmentIds ?
                             request.installmentIds.length || 0 : 0,
                         hasLoanPayment: request.loanAmount > 0
                     },
-                    installments: request.installmentIds || [],
+                    /*installments: request.installmentIds || [],
                     paymentDetails: {
                         month: request.month,
                         upiId: request.upiId,
                         screenshotUrl: request.screenshotUrl,
                         extractedInfo: request.extractedInfo,
-                    },
+                    },*/
                     status: request.status,
                     rejectionReason: request.rejectionReason || "",
                     acceptedAt: request.acceptedAt || null,
@@ -959,14 +959,14 @@ const generateContributionPaymentLink =
 
                 amountDetails: {
                     contributionAmount,
-                    loanAmount,
+                    //loanAmount,
                     totalAmount: amount,
                     month,
                     hasLoanPayment: loanAmount > 0,
                     installmentCount: dueInstallments.length
                 },
 
-                loanInstallments: dueInstallments.map(
+                /*loanInstallments: dueInstallments.map(
                     installment => ({
 
                         installmentId: installment._id,
@@ -976,7 +976,7 @@ const generateContributionPaymentLink =
                         interestAmount: installment.interestAmount,
                         totalAmount: installment.totalAmount
                     })
-                ),
+                ),*/
 
                 ownerAccount: {
                     adminId: group.adminId._id,
@@ -1386,11 +1386,11 @@ const getMemberPaymentDashboard = async(req, res) => {
                 totalPaidAllTime
             },
 
-            loanSummary: {
+            /*loanSummary: {
                 totalLoanTaken,
                 totalLoanPaid,
                 remainingLoanAmount
-            },
+            },*/
 
             recentTransactions: formattedTransactions
         });

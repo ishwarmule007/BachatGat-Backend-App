@@ -1,4 +1,4 @@
-const Loan = require("../models/Loan");
+/*const Loan = require("../models / Loan ");
 const Installment = require("../models/Installment");
 const Group = require("../models/Group");
 const User = require("../models/User");
@@ -1478,18 +1478,18 @@ const getLoanRepaymentSchedule =
         }
     };
 module.exports = {
-    requestLoan,
-    sendLoanProposal,
-    rejectLoanProposalByAdmin,
-    getLoanRepaymentSchedule,
-    getAllLoanRequests,
-    getLoanRequestDetails,
-    acceptLoanProposal,
-    rejectLoanProposalbyMember,
-    getAcceptedLoanProposals,
-    createLoan,
-    getLoanDetailsByAdmin,
-    getLoanDetailsByMember,
-    getMyLoans,
-    getGroupLoans,
-}
+        requestLoan,
+        sendLoanProposal,
+        rejectLoanProposalByAdmin,
+        getLoanRepaymentSchedule,
+        getAllLoanRequests,
+        getLoanRequestDetails,
+        acceptLoanProposal,
+        rejectLoanProposalbyMember,
+        getAcceptedLoanProposals,
+        createLoan,
+        getLoanDetailsByAdmin,
+        getLoanDetailsByMember,
+        getMyLoans,
+        getGroupLoans,
+} */

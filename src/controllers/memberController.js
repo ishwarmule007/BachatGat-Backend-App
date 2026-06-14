@@ -509,13 +509,13 @@ const getMemberProfile = async(req, res) => {
                 totalMonthlyContribution
             },
 
-            loanSummary: {
+            /*loanSummary: {
                 loanTaken,
                 loanPaid,
                 remainingToPay,
                 status: remainingToPay > 0 ?
                     "Keep going! You're doing great." : "No pending loan"
-            }
+            }*/
         });
 
     } catch (error) {

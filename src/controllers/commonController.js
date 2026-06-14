@@ -127,7 +127,7 @@ const getGroupDetails = async(req, res) => {
                 description: group.description,
                 formationDate: group.formationDate,
                 totalSaving: group.totalSaving || 0,
-                totalLoanGiven: group.totalLoanGiven || 0,
+                //totalLoanGiven: group.totalLoanGiven || 0,
                 totalMembers: approvedMembers.length,
                 pendingMembers: pendingMembers.length,
                 rejectedMembers: rejectedMembers.length,
@@ -195,7 +195,7 @@ const getMyGroups = async(req, res) => {
                 ),
                 formationDate: group.formationDate,
                 totalSaving: group.totalSaving || 0,
-                totalLoanGiven: group.totalLoanGiven || 0,
+                //totalLoanGiven: group.totalLoanGiven || 0,
                 totalMembers: group.members.filter(
                     (member) =>
                     member.status ===
