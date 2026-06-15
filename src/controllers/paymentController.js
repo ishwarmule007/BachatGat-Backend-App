@@ -460,9 +460,9 @@ const getPaymentDetails = async(req, res) => {
 
                 totalAmount,
 
-                hasLoanPayment: loanAmount > 0,
+                //hasLoanPayment: loanAmount > 0,
 
-                installmentCount: currentMonthLoanInstallments.length,
+                /*installmentCount : currentMonthLoanInstallments.length,
 
                 installments: currentMonthLoanInstallments.map(
                     (installment) => ({
@@ -472,7 +472,7 @@ const getPaymentDetails = async(req, res) => {
 
                         dueDate: installment.dueDate,
                     })
-                ),
+                ),*/
 
                 month,
             },
