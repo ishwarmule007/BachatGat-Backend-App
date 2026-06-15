@@ -216,7 +216,7 @@ router.post(
  * @swagger
  * /api/payments/request:
  *   get:
- *     summary: Get payment details before submitting payment request
+ *     summary: Get contribution payment details for next unpaid month
  *
  *     tags:
  *       - Payment
@@ -232,13 +232,6 @@ router.post(
  *         schema:
  *           type: string
  *         example: SBG-001
- *
- *       - in: query
- *         name: month
- *         required: true
- *         schema:
- *           type: string
- *         example: 2026-05-01
  *
  *     responses:
  *
@@ -260,54 +253,22 @@ router.post(
  *                   type: string
  *                   example: Payment details fetched successfully
  *
- *                 paymentBreakdown:
+ *                 payment:
  *                   type: object
  *
  *                   properties:
+ *
+ *                     paymentMonth:
+ *                       type: string
+ *                       example: 2026-06
  *
  *                     contributionAmount:
  *                       type: number
  *                       example: 500
  *
- *                     loanAmount:
- *                       type: number
- *                       example: 1200
- *
  *                     totalAmount:
  *                       type: number
- *                       example: 1700
- *
- *                     hasLoanPayment:
- *                       type: boolean
- *                       example: true
- *
- *                     installmentCount:
- *                       type: number
- *                       example: 2
- *
- *                     month:
- *                       type: string
- *                       example: 2026-05-01
- *
- *                     installments:
- *                       type: array
- *
- *                       items:
- *                         type: object
- *
- *                         properties:
- *
- *                           installmentId:
- *                             type: string
- *                             example: 6850f4f2ab123456789abcd1
- *
- *                           amount:
- *                             type: number
- *                             example: 600
- *
- *                           dueDate:
- *                             type: string
- *                             format: date-time
+ *                       example: 500
  *
  *                 ownerPaymentDetails:
  *                   type: object
@@ -316,12 +277,32 @@ router.post(
  *
  *                     ownerId:
  *                       type: string
- *                       example: 6850f4f2ab123456789abcd2
+ *                       example: 6850f4f2ab123456789abcd1
  *
  *                     ownerName:
  *                       type: string
  *                       example: Atharv Saraf
+ * 
+ *                     bankDetails:
+ *                       type: object
  *
+ *                       properties:
+ *
+ *                         accountHolderName:
+ *                           type: string
+ *                           example: Atharv Saraf
+ *
+ *                         bankName:
+ *                           type: string
+ *                           example: State Bank of India
+ *
+ *                         accountNumber:
+ *                           type: string
+ *                           example: 123456789012
+ *
+ *                         ifscCode:
+ *                           type: string
+ *                           example: SBIN0001234
  *                     upiId:
  *                       type: string
  *                       example: atharv@upi
@@ -336,7 +317,7 @@ router.post(
  *
  *                 paymentLink:
  *                   type: string
- *                   example: upi://pay?pa=atharv@upi&pn=Atharv%20Saraf&am=1700&cu=INR
+ *                   example: upi://pay?pa=atharv@upi&pn=Atharv%20Saraf&am=500&cu=INR
  *
  *                 alreadyPaid:
  *                   type: boolean
@@ -347,7 +328,7 @@ router.post(
  *                   example: false
  *
  *       400:
- *         description: Validation error or already paid
+ *         description: Validation error or payment already completed
  *
  *       401:
  *         description: Unauthorized - Token missing or invalid

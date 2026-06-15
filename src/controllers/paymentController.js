@@ -312,32 +312,25 @@ const createPaymentRequest = async(req, res) => {
     }
 };
 const getPaymentDetails = async(req, res) => {
+
     try {
 
-        const { groupCode, month } = req.query;
+        const { groupCode } = req.query;
 
-        if (!groupCode || !month) {
+        if (!groupCode) {
             return res.status(400).json({
                 success: false,
-                message: "groupCode and month are required",
+                message: "groupCode is required",
             });
         }
 
-        const paymentMonth = new Date(month);
-
-        if (isNaN(paymentMonth.getTime())) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid month format",
-            });
-        }
-
-        const group = await Group.findOne({
-            groupCode
-        }).populate(
-            "adminId",
-            "fullName mobileNumber upiId profilePicture"
-        );
+        const group =
+            await Group.findOne({
+                groupCode
+            }).populate(
+                "adminId",
+                "fullName mobileNumber upiId profilePicture"
+            );
 
         if (!group) {
             return res.status(404).json({
@@ -346,12 +339,13 @@ const getPaymentDetails = async(req, res) => {
             });
         }
 
-        const member = group.members.find(
-            (member) =>
-            member.userId.toString() ===
-            req.user._id.toString() &&
-            member.status === "approved"
-        );
+        const member =
+            group.members.find(
+                (member) =>
+                member.userId.toString() ===
+                req.user._id.toString() &&
+                member.status === "approved"
+            );
 
         if (!member) {
             return res.status(403).json({
@@ -360,18 +354,31 @@ const getPaymentDetails = async(req, res) => {
             });
         }
 
+        const contributionAmount = Number(
+            (
+                member.monthlyContributionAmount || 0
+            ).toFixed(2)
+        );
+
+        const currentDate = new Date();
+
+        const currentMonth =
+            `${currentDate.getFullYear()}-${String(
+                currentDate.getMonth() + 1
+            ).padStart(2, "0")}`;
+
         const existingContribution =
             await Contribution.findOne({
                 userId: req.user._id,
                 groupId: group._id,
-                month,
+                month: currentMonth,
                 status: "paid",
             });
 
         if (existingContribution) {
             return res.status(400).json({
                 success: false,
-                message: "Payment already completed for this month",
+                message: "Contribution already paid for current month",
             });
         }
 
@@ -379,62 +386,9 @@ const getPaymentDetails = async(req, res) => {
             await PaymentRequest.findOne({
                 userId: req.user._id,
                 groupId: group._id,
-                month,
+                month: currentMonth,
                 status: "pending",
             });
-
-        const contributionAmount = Number(
-            (
-                member.monthlyContributionAmount || 0
-            ).toFixed(2)
-        );
-
-        const monthEndDate = new Date(
-            paymentMonth.getFullYear(),
-            paymentMonth.getMonth() + 1,
-            0,
-            23,
-            59,
-            59
-        );
-
-        const unpaidInstallments =
-            await Installment.find({
-                memberId: req.user._id,
-                groupId: group._id,
-                status: {
-                    $ne: "PAID"
-                }
-            });
-
-        const currentMonthLoanInstallments =
-            unpaidInstallments.filter(
-                (installment) => {
-
-                    const dueDate =
-                        new Date(
-                            installment.dueDate
-                        );
-
-                    return dueDate <= monthEndDate;
-                }
-            );
-
-        const loanAmount = Number(
-            currentMonthLoanInstallments
-            .reduce(
-                (sum, installment) =>
-                sum + installment.totalAmount,
-                0
-            )
-            .toFixed(2)
-        );
-
-        const totalAmount = Number(
-            (
-                contributionAmount + loanAmount
-            ).toFixed(2)
-        );
 
         const ownerName =
             group.adminId.fullName;
@@ -445,36 +399,22 @@ const getPaymentDetails = async(req, res) => {
         const paymentLink =
             `upi://pay?pa=${ownerUpiId}` +
             `&pn=${encodeURIComponent(ownerName)}` +
-            `&am=${totalAmount}` +
+            `&am=${contributionAmount}` +
             `&cu=INR`;
 
         return res.status(200).json({
+
             success: true,
+
             message: "Payment details fetched successfully",
 
-            paymentBreakdown: {
+            payment: {
+
+                paymentMonth: currentMonth,
 
                 contributionAmount,
 
-                loanAmount,
-
-                totalAmount,
-
-                //hasLoanPayment: loanAmount > 0,
-
-                /*installmentCount : currentMonthLoanInstallments.length,
-
-                installments: currentMonthLoanInstallments.map(
-                    (installment) => ({
-                        installmentId: installment._id,
-
-                        amount: installment.totalAmount,
-
-                        dueDate: installment.dueDate,
-                    })
-                ),*/
-
-                month,
+                totalAmount: contributionAmount,
             },
 
             ownerPaymentDetails: {
@@ -484,7 +424,16 @@ const getPaymentDetails = async(req, res) => {
                 ownerName,
 
                 upiId: ownerUpiId,
+                bankDetails: {
 
+                    accountHolderName: group.adminId.bankDetails ? group.adminId.bankDetails.accountHolderName || null : null,
+
+                    bankName: group.adminId.bankDetails ? group.adminId.bankDetails.bankName || null : null,
+
+                    accountNumber: group.adminId.bankDetails ? group.adminId.bankDetails.accountNumber || null : null,
+
+                    ifscCode: group.adminId.bankDetails ? group.adminId.bankDetails.ifscCode || null : null,
+                },
                 mobileNumber: group.adminId.mobileNumber,
 
                 profilePicture: group.adminId.profilePicture,
