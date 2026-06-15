@@ -215,7 +215,7 @@ router.post(
 /**
  * @swagger
  * /api/payments/request:
- *   get:
+ *   post:
  *     summary: Get contribution payment details for next unpaid month
  *
  *     tags:
@@ -342,7 +342,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.get(
+router.post(
     "/request",
     authMiddleware,
     getPaymentDetails

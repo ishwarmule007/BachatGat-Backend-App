@@ -315,7 +315,7 @@ const getPaymentDetails = async(req, res) => {
 
     try {
 
-        const { groupCode } = req.query;
+        const { groupCode } = req.body;
 
         if (!groupCode) {
             return res.status(400).json({
