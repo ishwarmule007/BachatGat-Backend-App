@@ -315,7 +315,7 @@ const getPaymentDetails = async(req, res) => {
 
     try {
 
-        const { groupCode } = req.body;
+        const { groupCode } = req.query;
 
         if (!groupCode) {
             return res.status(400).json({
@@ -324,13 +324,18 @@ const getPaymentDetails = async(req, res) => {
             });
         }
 
-        const group =
-            await Group.findOne({
-                groupCode
-            }).populate(
-                "adminId",
-                "fullName mobileNumber upiId profilePicture"
-            );
+        const group = await Group.findOne({
+            groupCode
+        }).populate(
+            "adminId",
+            `
+            fullName
+            mobileNumber
+            upiId
+            profilePicture
+            bankDetails
+            `
+        );
 
         if (!group) {
             return res.status(404).json({
@@ -339,13 +344,12 @@ const getPaymentDetails = async(req, res) => {
             });
         }
 
-        const member =
-            group.members.find(
-                (member) =>
-                member.userId.toString() ===
-                req.user._id.toString() &&
-                member.status === "approved"
-            );
+        const member = group.members.find(
+            (member) =>
+            member.userId.toString() ===
+            req.user._id.toString() &&
+            member.status === "approved"
+        );
 
         if (!member) {
             return res.status(403).json({
@@ -356,9 +360,16 @@ const getPaymentDetails = async(req, res) => {
 
         const contributionAmount = Number(
             (
-                member.monthlyContributionAmount || 0
+                member.monthlyContribution || 0
             ).toFixed(2)
         );
+
+        if (contributionAmount <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Monthly contribution amount is not configured",
+            });
+        }
 
         const currentDate = new Date();
 
@@ -397,9 +408,9 @@ const getPaymentDetails = async(req, res) => {
             group.adminId.upiId;
 
         const paymentLink =
-            `upi://pay?pa=${ownerUpiId}` +
+            `upi://pay?pa=${encodeURIComponent(ownerUpiId)}` +
             `&pn=${encodeURIComponent(ownerName)}` +
-            `&am=${contributionAmount}` +
+            `&am=${contributionAmount.toFixed(2)}` +
             `&cu=INR`;
 
         return res.status(200).json({
@@ -424,19 +435,25 @@ const getPaymentDetails = async(req, res) => {
                 ownerName,
 
                 upiId: ownerUpiId,
-                bankDetails: {
 
-                    accountHolderName: group.adminId.bankDetails ? group.adminId.bankDetails.accountHolderName || null : null,
-
-                    bankName: group.adminId.bankDetails ? group.adminId.bankDetails.bankName || null : null,
-
-                    accountNumber: group.adminId.bankDetails ? group.adminId.bankDetails.accountNumber || null : null,
-
-                    ifscCode: group.adminId.bankDetails ? group.adminId.bankDetails.ifscCode || null : null,
-                },
                 mobileNumber: group.adminId.mobileNumber,
 
                 profilePicture: group.adminId.profilePicture,
+
+                bankDetails: {
+
+                    accountHolderName: group.adminId.bankDetails ? group.adminId.bankDetails.
+                    accountHolderName || null: null,
+
+                    bankName: group.adminId.bankDetails ? group.adminId.bankDetails.
+                    bankName || null: null,
+
+                    accountNumber: group.adminId.bankDetails ? group.adminId.bankDetails.
+                    accountNumber || null: null,
+
+                    ifscCode: group.adminId.bankDetails ? group.adminId.bankDetails.
+                    ifscCode || null: null,
+                }
             },
 
             paymentLink,
