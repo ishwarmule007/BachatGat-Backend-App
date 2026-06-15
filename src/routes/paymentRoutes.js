@@ -12,7 +12,8 @@ const {
     resubmitPaymentRequest,
     createPaymentRequest,
     getRejectedPaymentRequestDetails,
-    getMemberPaymentDashboard
+    getMemberPaymentDashboard,
+    getPaymentDetails
 } = require("../controllers/paymentController");
 const {
     getAdminPaymentDashboard
@@ -20,7 +21,7 @@ const {
 
 /**
  * @swagger
- * /api/payments/request:
+ * /api/payments/request_submit:
  *   post:
  *     summary: Create payment request for contribution and loan repayment
  *     tags:
@@ -206,10 +207,164 @@ const {
  *         description: Internal server error
  */
 router.post(
-    "/request",
+    "/request_submit",
     authMiddleware,
     upload.single("screenshot"),
     createPaymentRequest
+);
+/**
+ * @swagger
+ * /api/payments/request:
+ *   get:
+ *     summary: Get payment details before submitting payment request
+ *
+ *     tags:
+ *       - Payment
+ *
+ *     security:
+ *       - bearerAuth: []
+ *
+ *     parameters:
+ *
+ *       - in: query
+ *         name: groupCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: SBG-001
+ *
+ *       - in: query
+ *         name: month
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: 2026-05-01
+ *
+ *     responses:
+ *
+ *       200:
+ *         description: Payment details fetched successfully
+ *
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *
+ *               properties:
+ *
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *
+ *                 message:
+ *                   type: string
+ *                   example: Payment details fetched successfully
+ *
+ *                 paymentBreakdown:
+ *                   type: object
+ *
+ *                   properties:
+ *
+ *                     contributionAmount:
+ *                       type: number
+ *                       example: 500
+ *
+ *                     loanAmount:
+ *                       type: number
+ *                       example: 1200
+ *
+ *                     totalAmount:
+ *                       type: number
+ *                       example: 1700
+ *
+ *                     hasLoanPayment:
+ *                       type: boolean
+ *                       example: true
+ *
+ *                     installmentCount:
+ *                       type: number
+ *                       example: 2
+ *
+ *                     month:
+ *                       type: string
+ *                       example: 2026-05-01
+ *
+ *                     installments:
+ *                       type: array
+ *
+ *                       items:
+ *                         type: object
+ *
+ *                         properties:
+ *
+ *                           installmentId:
+ *                             type: string
+ *                             example: 6850f4f2ab123456789abcd1
+ *
+ *                           amount:
+ *                             type: number
+ *                             example: 600
+ *
+ *                           dueDate:
+ *                             type: string
+ *                             format: date-time
+ *
+ *                 ownerPaymentDetails:
+ *                   type: object
+ *
+ *                   properties:
+ *
+ *                     ownerId:
+ *                       type: string
+ *                       example: 6850f4f2ab123456789abcd2
+ *
+ *                     ownerName:
+ *                       type: string
+ *                       example: Atharv Saraf
+ *
+ *                     upiId:
+ *                       type: string
+ *                       example: atharv@upi
+ *
+ *                     mobileNumber:
+ *                       type: string
+ *                       example: 9876543210
+ *
+ *                     profilePicture:
+ *                       type: string
+ *                       example: https://res.cloudinary.com/demo/profile.jpg
+ *
+ *                 paymentLink:
+ *                   type: string
+ *                   example: upi://pay?pa=atharv@upi&pn=Atharv%20Saraf&am=1700&cu=INR
+ *
+ *                 alreadyPaid:
+ *                   type: boolean
+ *                   example: false
+ *
+ *                 pendingRequest:
+ *                   type: boolean
+ *                   example: false
+ *
+ *       400:
+ *         description: Validation error or already paid
+ *
+ *       401:
+ *         description: Unauthorized - Token missing or invalid
+ *
+ *       403:
+ *         description: User is not approved member
+ *
+ *       404:
+ *         description: Group not found
+ *
+ *       500:
+ *         description: Internal server error
+ */
+router.get(
+    "/request",
+    authMiddleware,
+    getPaymentDetails
 );
 
 /**

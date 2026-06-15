@@ -311,6 +311,203 @@ const createPaymentRequest = async(req, res) => {
         });
     }
 };
+const getPaymentDetails = async(req, res) => {
+    try {
+
+        const { groupCode, month } = req.query;
+
+        if (!groupCode || !month) {
+            return res.status(400).json({
+                success: false,
+                message: "groupCode and month are required",
+            });
+        }
+
+        const paymentMonth = new Date(month);
+
+        if (isNaN(paymentMonth.getTime())) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid month format",
+            });
+        }
+
+        const group = await Group.findOne({
+            groupCode
+        }).populate(
+            "adminId",
+            "fullName mobileNumber upiId profilePicture"
+        );
+
+        if (!group) {
+            return res.status(404).json({
+                success: false,
+                message: "Group not found",
+            });
+        }
+
+        const member = group.members.find(
+            (member) =>
+            member.userId.toString() ===
+            req.user._id.toString() &&
+            member.status === "approved"
+        );
+
+        if (!member) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not an approved member of this group",
+            });
+        }
+
+        const existingContribution =
+            await Contribution.findOne({
+                userId: req.user._id,
+                groupId: group._id,
+                month,
+                status: "paid",
+            });
+
+        if (existingContribution) {
+            return res.status(400).json({
+                success: false,
+                message: "Payment already completed for this month",
+            });
+        }
+
+        const existingPendingRequest =
+            await PaymentRequest.findOne({
+                userId: req.user._id,
+                groupId: group._id,
+                month,
+                status: "pending",
+            });
+
+        const contributionAmount = Number(
+            (
+                member.monthlyContributionAmount || 0
+            ).toFixed(2)
+        );
+
+        const monthEndDate = new Date(
+            paymentMonth.getFullYear(),
+            paymentMonth.getMonth() + 1,
+            0,
+            23,
+            59,
+            59
+        );
+
+        const unpaidInstallments =
+            await Installment.find({
+                memberId: req.user._id,
+                groupId: group._id,
+                status: {
+                    $ne: "PAID"
+                }
+            });
+
+        const currentMonthLoanInstallments =
+            unpaidInstallments.filter(
+                (installment) => {
+
+                    const dueDate =
+                        new Date(
+                            installment.dueDate
+                        );
+
+                    return dueDate <= monthEndDate;
+                }
+            );
+
+        const loanAmount = Number(
+            currentMonthLoanInstallments
+            .reduce(
+                (sum, installment) =>
+                sum + installment.totalAmount,
+                0
+            )
+            .toFixed(2)
+        );
+
+        const totalAmount = Number(
+            (
+                contributionAmount + loanAmount
+            ).toFixed(2)
+        );
+
+        const ownerName =
+            group.adminId.fullName;
+
+        const ownerUpiId =
+            group.adminId.upiId;
+
+        const paymentLink =
+            `upi://pay?pa=${ownerUpiId}` +
+            `&pn=${encodeURIComponent(ownerName)}` +
+            `&am=${totalAmount}` +
+            `&cu=INR`;
+
+        return res.status(200).json({
+            success: true,
+            message: "Payment details fetched successfully",
+
+            paymentBreakdown: {
+
+                contributionAmount,
+
+                loanAmount,
+
+                totalAmount,
+
+                hasLoanPayment: loanAmount > 0,
+
+                installmentCount: currentMonthLoanInstallments.length,
+
+                installments: currentMonthLoanInstallments.map(
+                    (installment) => ({
+                        installmentId: installment._id,
+
+                        amount: installment.totalAmount,
+
+                        dueDate: installment.dueDate,
+                    })
+                ),
+
+                month,
+            },
+
+            ownerPaymentDetails: {
+
+                ownerId: group.adminId._id,
+
+                ownerName,
+
+                upiId: ownerUpiId,
+
+                mobileNumber: group.adminId.mobileNumber,
+
+                profilePicture: group.adminId.profilePicture,
+            },
+
+            paymentLink,
+
+            alreadyPaid: false,
+
+            pendingRequest:
+                !!existingPendingRequest,
+        });
+
+    } catch (error) {
+
+        console.error(error);
+
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
 const updatePaymentRequestStatus =
     async(req, res) => {
         try {
@@ -1411,5 +1608,6 @@ module.exports = {
     generateContributionPaymentLink,
     resubmitPaymentRequest,
     getRejectedPaymentRequestDetails,
-    getMemberPaymentDashboard
+    getMemberPaymentDashboard,
+    getPaymentDetails
 };
