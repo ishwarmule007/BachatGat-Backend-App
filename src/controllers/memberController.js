@@ -128,25 +128,28 @@ const acceptGroupRequest = async(req, res) => {
         const user = await User.findById(userId);
 
         const approvedMembers = group.members.filter(
-            member => member.status === "approved"
+            member =>
+            member.status === "approved" &&
+            member.userId.toString() !== userId.toString()
         );
 
         const notifications = approvedMembers.map(member => ({
-            userId: member.userId,
+            userId: member.userId._id || member.userId,
             groupId: group._id,
             title: "New member added",
             message: `${user.fullName} has joined ${group.groupName}`,
             type: "member_joined"
         }));
 
-        await createManyNotifications(notifications);
-        await createManyNotifications([{
+        notifications.push({
             userId: group.adminId,
             groupId: group._id,
             title: "New member added",
             message: `${user.fullName} has joined ${group.groupName}`,
             type: "member_joined"
-        }]);
+        });
+        await createManyNotifications(notifications);
+
         res.status(200).json({
             message: "Group request accepted successfully",
             groupCode,
