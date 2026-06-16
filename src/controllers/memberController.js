@@ -140,7 +140,13 @@ const acceptGroupRequest = async(req, res) => {
         }));
 
         await createManyNotifications(notifications);
-
+        await createManyNotifications([{
+            userId: group.adminId,
+            groupId: group._id,
+            title: "New member added",
+            message: `${user.fullName} has joined ${group.groupName}`,
+            type: "member_joined"
+        }]);
         res.status(200).json({
             message: "Group request accepted successfully",
             groupCode,
