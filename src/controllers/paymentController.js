@@ -466,8 +466,6 @@ const getPaymentDetails = async(req, res) => {
 
     } catch (error) {
 
-        console.error(error);
-
         return res.status(500).json({
             success: false,
             message: error.message,
@@ -643,7 +641,6 @@ const updatePaymentRequestStatus =
                 paymentRequest,
             });
         } catch (error) {
-            console.error(error);
             return res.status(500).json({
                 success: false,
                 message: error.message,
@@ -736,7 +733,6 @@ const getMemberPaymentHistory =
             });
 
         } catch (error) {
-            console.error(error);
             return res.status(500).json({
                 success: false,
                 message: error.message,
@@ -856,7 +852,6 @@ const getAdminPaymentRequests =
             });
 
         } catch (error) {
-            console.error(error);
             return res.status(500).json({
                 success: false,
                 message: error.message,
@@ -963,9 +958,6 @@ const getPaymentRequestDetail =
             });
 
         } catch (error) {
-
-            console.error(error);
-
             return res.status(500).json({
                 success: false,
                 message: error.message,
@@ -1168,7 +1160,6 @@ const generateContributionPaymentLink =
             });
 
         } catch (error) {
-            console.error(error);
             return res.status(500).json({
                 success: false,
                 message: error.message,
@@ -1254,7 +1245,6 @@ const resubmitPaymentRequest =
             });
 
         } catch (error) {
-            console.error(error);
             return res.status(500).json({
                 success: false,
                 message: error.message
@@ -1356,7 +1346,6 @@ const getRejectedPaymentRequestDetails =
             });
 
         } catch (error) {
-            console.error(error);
             return res.status(500).json({
                 success: false,
                 message: error.message
