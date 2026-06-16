@@ -171,7 +171,12 @@ const getMyGroups = async(req, res) => {
         } else {
 
             groups = await Group.find({
-                "members.userId": userId
+                members: {
+                    $elemMatch: {
+                        userId: userId,
+                        status: "approved"
+                    }
+                }
             });
         }
 
