@@ -7,7 +7,7 @@ const cloudinary = require("../config/cloudinary");
 const sharp = require("sharp");
 const streamifier = require("streamifier");
 const Tesseract = require("tesseract.js");
-
+const Installment = require("../models/Installment");
 const createPaymentRequest = async(req, res) => {
     try {
         const {
