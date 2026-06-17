@@ -177,27 +177,27 @@ const createPaymentRequest = async(req, res) => {
                 59,
                 59
             );
-        const unpaidInstallments =
-            await Installment.find({
-                memberId: req.user._id,
-                groupId: group._id,
-                status: {
-                    $ne: "PAID"
-                }
-            });
-        const currentMonthLoanInstallments =
-            unpaidInstallments.filter(
-                installment => {
-                    const dueDate =
-                        new Date(
-                            installment.dueDate
-                        );
-                    return (
-                        dueDate <=
-                        monthEndDate
+        /*const unpaidInstallments =
+        await Installment.find({
+            memberId: req.user._id,
+            groupId: group._id,
+            status: {
+                $ne: "PAID"
+            }
+        });*/
+        /*const currentMonthLoanInstallments =
+        unpaidInstallments.filter(
+            installment => {
+                const dueDate =
+                    new Date(
+                        installment.dueDate
                     );
-                }
-            );
+                return (
+                    dueDate <=
+                    monthEndDate
+                );
+            }
+        );
         const loanAmount =
             Number(
                 currentMonthLoanInstallments
@@ -209,24 +209,15 @@ const createPaymentRequest = async(req, res) => {
                     0
                 )
                 .toFixed(2)
-            );
+            );*/
         const amount =
             Number(
                 (
-                    contributionAmount +
-                    loanAmount
+                    contributionAmount
+                    /*+
+                    loanAmount*/
                 ).toFixed(2)
             );
-        if (
-            extractedInfo.extractedAmount &&
-            extractedInfo.extractedAmount <
-            amount
-        ) {
-            return res.status(400).json({
-                success: false,
-                message: `Uploaded payment screenshot amount is less than required amount ₹${amount}`
-            });
-        }
         const uploadFromBuffer = () => {
 
             return new Promise(
@@ -300,7 +291,7 @@ const createPaymentRequest = async(req, res) => {
                 contributionAmount,
                 loanAmount,
                 totalAmount: amount,
-                hasLoanPayment: loanAmount > 0
+                //hasLoanPayment: loanAmount > 0
             },
 
             transactionSummary: {
