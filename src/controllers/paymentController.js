@@ -295,13 +295,23 @@ const createPaymentRequest = async(req, res) => {
         return res.status(201).json({
             success: true,
             message: "Payment request submitted successfully",
+
             paymentBreakdown: {
                 contributionAmount,
                 loanAmount,
                 totalAmount: amount,
                 hasLoanPayment: loanAmount > 0
             },
-            paymentRequest,
+
+            transactionSummary: {
+                groupName: group.groupName,
+                memberName: req.user.fullName,
+                adminName: group.adminName,
+                transactionId: extractedInfo.transactionId ||
+                    paymentRequest._id
+            },
+
+            paymentRequest
         });
     } catch (error) {
         console.error(error);
