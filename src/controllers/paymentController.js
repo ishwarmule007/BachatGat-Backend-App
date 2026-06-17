@@ -161,7 +161,7 @@ const createPaymentRequest = async(req, res) => {
         const contributionAmount =
             Number(
                 (
-                    member.monthlyContributionAmount || 0
+                    member.monthlyContribution || 0
                 ).toFixed(2)
             );
         const monthEndDate =
@@ -296,7 +296,7 @@ const createPaymentRequest = async(req, res) => {
             transactionSummary: {
                 groupName: group.groupName,
                 memberName: req.user.fullName,
-                adminName: group.adminName,
+                adminName: group.adminId.fullName,
                 transactionId: extractedInfo.transactionId ||
                     paymentRequest._id
             },
