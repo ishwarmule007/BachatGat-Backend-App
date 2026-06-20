@@ -98,11 +98,6 @@ const initializeSocket = (server) => {
                     groupCode: cleanGroupCode,
                     message: `Joined group ${cleanGroupCode}`
                 });
-
-                console.log(
-                    `${socket.user.fullName} joined ${cleanGroupCode}`
-                );
-
             } catch (error) {
 
                 socket.emit("errorMessage", {
