@@ -224,7 +224,7 @@ router.get(
  *                   type: string
  *                   example: "Groups fetched successfully"
  *
- *                 activeGroups:
+ *                 groups:
  *                   type: array
  *                   items:
  *                     type: object
@@ -255,112 +255,27 @@ router.get(
  *                         type: boolean
  *                         example: false
  *
- *                       totalMembers:
- *                         type: integer
- *                         example: 12
+ *                       formationDate:
+ *                         type: string
+ *                         format: date
  *
  *                       totalSaving:
  *                         type: number
  *                         example: 50000
  *
- *                       totalLoanGiven:
- *                         type: number
- *                         example: 20000
- *
- *                       formationDate:
- *                         type: string
- *                         format: date
+ *                       totalMembers:
+ *                         type: integer
+ *                         example: 12
  *
  *                       groupStatus:
  *                         type: string
  *                         enum: [active, closed]
  *                         example: "active"
  *
- *                 removedGroups:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *
- *                       groupId:
+ *                       memberStatus:
  *                         type: string
- *
- *                       groupName:
- *                         type: string
- *
- *                       groupCode:
- *                         type: string
- *
- *                       unreadCount:
- *                         type: integer
- *
- *                       lastSeenMessageId:
- *                         type: string
- *                         nullable: true
- *
- *                       isArchived:
- *                         type: boolean
- *
- *                       totalMembers:
- *                         type: integer
- *
- *                       totalSaving:
- *                         type: number
- *
- *                       totalLoanGiven:
- *                         type: number
- *
- *                       formationDate:
- *                         type: string
- *                         format: date
- *
- *                       groupStatus:
- *                         type: string
- *                         enum: [active, closed]
- *                         example: "active"
- *
- *                 closedGroups:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *
- *                       groupId:
- *                         type: string
- *
- *                       groupName:
- *                         type: string
- *
- *                       groupCode:
- *                         type: string
- *
- *                       unreadCount:
- *                         type: integer
- *
- *                       lastSeenMessageId:
- *                         type: string
- *                         nullable: true
- *
- *                       isArchived:
- *                         type: boolean
- *
- *                       totalMembers:
- *                         type: integer
- *
- *                       totalSaving:
- *                         type: number
- *
- *                       totalLoanGiven:
- *                         type: number
- *
- *                       formationDate:
- *                         type: string
- *                         format: date
- *
- *                       groupStatus:
- *                         type: string
- *                         enum: [active, closed]
- *                         example: "closed"
+ *                         enum: [pending, approved, rejected, removed]
+ *                         example: "approved"
  *
  *       401:
  *         description: Unauthorized - Token missing or invalid

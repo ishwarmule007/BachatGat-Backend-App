@@ -7,7 +7,7 @@ const cloudinary = require("../config/cloudinary");
 const sharp = require("sharp");
 const streamifier = require("streamifier");
 const Tesseract = require("tesseract.js");
-
+const Installment = require("../models/Installment");
 const createPaymentRequest = async(req, res) => {
     try {
         const {
@@ -161,7 +161,7 @@ const createPaymentRequest = async(req, res) => {
         const contributionAmount =
             Number(
                 (
-                    member.monthlyContributionAmount || 0
+                    member.monthlyContribution || 0
                 ).toFixed(2)
             );
         const monthEndDate =
@@ -217,16 +217,6 @@ const createPaymentRequest = async(req, res) => {
                     loanAmount
                 ).toFixed(2)
             );
-        if (
-            extractedInfo.extractedAmount &&
-            extractedInfo.extractedAmount <
-            amount
-        ) {
-            return res.status(400).json({
-                success: false,
-                message: `Uploaded payment screenshot amount is less than required amount ₹${amount}`
-            });
-        }
         const uploadFromBuffer = () => {
 
             return new Promise(
@@ -295,16 +285,187 @@ const createPaymentRequest = async(req, res) => {
         return res.status(201).json({
             success: true,
             message: "Payment request submitted successfully",
+
             paymentBreakdown: {
                 contributionAmount,
                 loanAmount,
                 totalAmount: amount,
                 hasLoanPayment: loanAmount > 0
             },
-            paymentRequest,
+
+            transactionSummary: {
+                groupName: group.groupName,
+                memberName: req.user.fullName,
+                adminName: group.adminId.fullName,
+                transactionId: extractedInfo.transactionId ||
+                    paymentRequest._id
+            },
+
+            paymentRequest
         });
     } catch (error) {
         console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+const getPaymentDetails = async(req, res) => {
+
+    try {
+
+        const { groupCode } = req.body;
+
+        if (!groupCode) {
+            return res.status(400).json({
+                success: false,
+                message: "groupCode is required",
+            });
+        }
+
+        const group = await Group.findOne({
+            groupCode
+        }).populate(
+            "adminId",
+            `
+            fullName
+            mobileNumber
+            upiId
+            profilePicture
+            bankDetails
+            `
+        );
+
+        if (!group) {
+            return res.status(404).json({
+                success: false,
+                message: "Group not found",
+            });
+        }
+
+        const member = group.members.find(
+            (member) =>
+            member.userId.toString() ===
+            req.user._id.toString() &&
+            member.status === "approved"
+        );
+
+        if (!member) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not an approved member of this group",
+            });
+        }
+
+        const contributionAmount = Number(
+            (
+                member.monthlyContribution || 0
+            ).toFixed(2)
+        );
+
+        if (contributionAmount <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Monthly contribution amount is not configured",
+            });
+        }
+
+        const currentDate = new Date();
+
+        const currentMonth =
+            `${currentDate.getFullYear()}-${String(
+                currentDate.getMonth() + 1
+            ).padStart(2, "0")}`;
+
+        const existingContribution =
+            await Contribution.findOne({
+                userId: req.user._id,
+                groupId: group._id,
+                month: currentMonth,
+                status: "paid",
+            });
+
+        if (existingContribution) {
+            return res.status(400).json({
+                success: false,
+                message: "Contribution already paid for current month",
+            });
+        }
+
+        const existingPendingRequest =
+            await PaymentRequest.findOne({
+                userId: req.user._id,
+                groupId: group._id,
+                month: currentMonth,
+                status: "pending",
+            });
+
+        const ownerName =
+            group.adminId.fullName;
+
+        const ownerUpiId =
+            group.adminId.upiId;
+
+        const paymentLink =
+            `upi://pay?pa=${encodeURIComponent(ownerUpiId)}` +
+            `&pn=${encodeURIComponent(ownerName)}` +
+            `&am=${contributionAmount.toFixed(2)}` +
+            `&cu=INR`;
+
+        return res.status(200).json({
+
+            success: true,
+
+            message: "Payment details fetched successfully",
+
+            payment: {
+
+                paymentMonth: currentMonth,
+
+                contributionAmount,
+
+                totalAmount: contributionAmount,
+            },
+
+            ownerPaymentDetails: {
+
+                ownerId: group.adminId._id,
+
+                ownerName,
+
+                upiId: ownerUpiId,
+
+                mobileNumber: group.adminId.mobileNumber,
+
+                profilePicture: group.adminId.profilePicture,
+
+                bankDetails: {
+
+                    accountHolderName: group.adminId.bankDetails ? group.adminId.bankDetails.
+                    accountHolderName || null: null,
+
+                    bankName: group.adminId.bankDetails ? group.adminId.bankDetails.
+                    bankName || null: null,
+
+                    accountNumber: group.adminId.bankDetails ? group.adminId.bankDetails.
+                    accountNumber || null: null,
+
+                    ifscCode: group.adminId.bankDetails ? group.adminId.bankDetails.
+                    ifscCode || null: null,
+                }
+            },
+
+            paymentLink,
+
+            alreadyPaid: false,
+
+            pendingRequest:
+                !!existingPendingRequest,
+        });
+
+    } catch (error) {
+
         return res.status(500).json({
             success: false,
             message: error.message,
@@ -480,7 +641,6 @@ const updatePaymentRequestStatus =
                 paymentRequest,
             });
         } catch (error) {
-            console.error(error);
             return res.status(500).json({
                 success: false,
                 message: error.message,
@@ -573,7 +733,6 @@ const getMemberPaymentHistory =
             });
 
         } catch (error) {
-            console.error(error);
             return res.status(500).json({
                 success: false,
                 message: error.message,
@@ -693,7 +852,6 @@ const getAdminPaymentRequests =
             });
 
         } catch (error) {
-            console.error(error);
             return res.status(500).json({
                 success: false,
                 message: error.message,
@@ -800,9 +958,6 @@ const getPaymentRequestDetail =
             });
 
         } catch (error) {
-
-            console.error(error);
-
             return res.status(500).json({
                 success: false,
                 message: error.message,
@@ -1005,7 +1160,6 @@ const generateContributionPaymentLink =
             });
 
         } catch (error) {
-            console.error(error);
             return res.status(500).json({
                 success: false,
                 message: error.message,
@@ -1091,7 +1245,6 @@ const resubmitPaymentRequest =
             });
 
         } catch (error) {
-            console.error(error);
             return res.status(500).json({
                 success: false,
                 message: error.message
@@ -1193,7 +1346,6 @@ const getRejectedPaymentRequestDetails =
             });
 
         } catch (error) {
-            console.error(error);
             return res.status(500).json({
                 success: false,
                 message: error.message
@@ -1411,5 +1563,6 @@ module.exports = {
     generateContributionPaymentLink,
     resubmitPaymentRequest,
     getRejectedPaymentRequestDetails,
-    getMemberPaymentDashboard
+    getMemberPaymentDashboard,
+    getPaymentDetails
 };

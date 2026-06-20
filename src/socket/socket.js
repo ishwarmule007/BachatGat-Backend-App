@@ -51,7 +51,6 @@ const initializeSocket = (server) => {
     });
 
     io.on("connection", (socket) => {
-        console.log("User connected:", socket.user.fullName);
         socket.on("joinGroup", async(data) => {
             try {
 
@@ -856,9 +855,7 @@ const initializeSocket = (server) => {
                 });
             }
         });
-        socket.on("disconnect", () => {
-            console.log("User disconnected:", socket.user.fullName);
-        });
+        socket.on("disconnect", () => {});
     });
 };
 
