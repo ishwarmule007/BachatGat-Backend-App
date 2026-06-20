@@ -1,17 +1,13 @@
 const axios = require("axios");
 
-const geocodeAddress = async({
+const geocodeVillage = async({
     village,
-    taluka,
     district,
     state
 }) => {
-
     try {
-
         const query = [
                 village,
-                taluka,
                 district,
                 state,
                 "India"
@@ -24,8 +20,7 @@ const geocodeAddress = async({
                 params: {
                     q: query,
                     format: "json",
-                    limit: 10,
-                    addressdetails: 1,
+                    limit: 1,
                     countrycodes: "in"
                 },
                 headers: {
@@ -42,36 +37,7 @@ const geocodeAddress = async({
             };
         }
 
-        const matched = response.data.find(item => {
-
-            const address = item.address || {};
-
-            const placeName =
-                address.village ||
-                address.town ||
-                address.city ||
-                "";
-
-            const county =
-                address.county ||
-                "";
-
-            const stateDistrict =
-                address.state_district ||
-                "";
-
-            return (
-                placeName.toLowerCase().includes(village.toLowerCase()) &&
-                (
-                    county.toLowerCase().includes(taluka.toLowerCase()) ||
-                    stateDistrict.toLowerCase().includes(district.toLowerCase())
-                ) &&
-                address.state &&
-                address.state.toLowerCase().includes(state.toLowerCase())
-            );
-        });
-
-        const location = matched || response.data[0];
+        const location = response.data[0];
 
         return {
             latitude: Number(location.lat),
@@ -79,7 +45,6 @@ const geocodeAddress = async({
         };
 
     } catch (error) {
-
         console.error("Geocoding Error:", error.message);
 
         return {
@@ -89,4 +54,4 @@ const geocodeAddress = async({
     }
 };
 
-module.exports = geocodeAddress;
+module.exports = geocodeVillage;
