@@ -339,12 +339,6 @@ const addMember = async(req, res) => {
             });
             await user.save();
             isNewUser = true;
-        } else {
-            if (user.fullName !== fullName || user.dateOfBirth.toISOString() !== new Date(dateOfBirth).toISOString()) {
-                return res.status(400).json({
-                    message: "Existing user details do not match with provided fullName and dateOfBirth"
-                });
-            }
         }
         const existingMember = group.members.find(
             m => m.userId.toString() === user._id.toString()
