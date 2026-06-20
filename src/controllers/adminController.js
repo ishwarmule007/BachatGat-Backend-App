@@ -7,6 +7,59 @@ const Contribution = require('../models/contribution');
 const PaymentRequest = require('../models/PaymentRequest');
 const geocodeAddress = require("../utils/geocodeAddress");
 const sendSMS = require("../utils/sendSMS");
+const updateProfile = async(req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const {
+            fullName,
+            mobileNumber,
+            address,
+            dateOfBirth
+        } = req.body;
+
+        const updateData = {};
+
+        if (fullName !== undefined)
+            updateData.fullName = fullName;
+
+        if (mobileNumber !== undefined)
+            updateData.mobileNumber = mobileNumber;
+
+        if (address !== undefined)
+            updateData.address = address;
+
+        if (dateOfBirth !== undefined)
+            updateData.dateOfBirth = dateOfBirth;
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            updateData, {
+                new: true,
+                runValidators: true
+            }
+        ).select("-password");
+
+        if (!updatedUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Profile updated successfully",
+            data: updatedUser
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
 
 const registerAdmin = async(req, res) => {
     try {
@@ -909,5 +962,6 @@ module.exports = {
     removeMemberFromGroup,
     getGroupsWithMembers,
     editMemberByAdmin,
-    deleteGroupByAdmin
+    deleteGroupByAdmin,
+    updateProfile
 };
