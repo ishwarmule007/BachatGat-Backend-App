@@ -57,6 +57,7 @@ const passwordlogin = async(req, res) => {
         });
     }
 };
+//otp services are not bought right know
 const sendOTP = async(req, res) => {
     try {
         const { mobileNumber } = req.body;
@@ -100,6 +101,7 @@ const sendOTP = async(req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+//to get user profile from the user schema for intial language in app home page .
 const getMyProfile = async(req, res) => {
     try {
         const user = await User.findById(req.user._id).select(
@@ -129,7 +131,7 @@ const getMyProfile = async(req, res) => {
         });
     }
 };
-
+//otp services are not working
 const verifyOTP = async(req, res) => {
     try {
         const { mobileNumber, otp, purpose } = req.body;
@@ -191,6 +193,7 @@ const verifyOTP = async(req, res) => {
         });
     }
 };
+// not working as otp services are not working
 const forgetPassword = async(req, res) => {
     try {
 

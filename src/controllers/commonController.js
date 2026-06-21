@@ -230,6 +230,7 @@ const getMyGroups = async(req, res) => {
         });
     }
 };
+// currenlty not using to be used in refreshed token , right now by frontend 
 const logoutUser = async(req, res) => {
     try {
 

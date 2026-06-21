@@ -1,3 +1,5 @@
+//loan part commented right now 
+
 const PaymentRequest = require("../models/PaymentRequest");
 const Contribution = require("../models/contribution");
 const Group = require("../models/Group");

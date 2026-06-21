@@ -7,6 +7,9 @@ const Contribution = require('../models/contribution');
 const PaymentRequest = require('../models/PaymentRequest');
 const geocodeAddress = require("../utils/geocodeAddress");
 const sendSMS = require("../utils/sendSMS");
+/*to update the the profile of the admin 
+for now using patch for updation of 
+fullName,mobileNumber,address,dateofBirth*/
 const updateProfile = async(req, res) => {
     try {
         const userId = req.user.id;

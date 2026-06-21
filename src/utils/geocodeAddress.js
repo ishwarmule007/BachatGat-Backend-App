@@ -1,3 +1,5 @@
+//low accuracy in it
+
 const axios = require("axios");
 
 const geocodeVillage = async({

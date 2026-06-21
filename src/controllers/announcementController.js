@@ -1,6 +1,6 @@
 const Announcement = require("../models/announcement");
 const Group = require("../models/Group");
-
+//currently accounment not added as meeting is not added in app 
 const createAnnouncement = async(req, res) => {
     try {
         const adminId = req.user._id;
