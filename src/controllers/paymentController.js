@@ -111,9 +111,6 @@ const createPaymentRequest = async(req, res) => {
             "eng",
         );
         const extractedText = ocrResult.data.text;
-        console.log("========== OCR TEXT ==========");
-        console.log(extractedText);
-        console.log("==============================");
         const amountPatterns = [
             /Amount\s*[:\-]?\s*₹?\s*([\d,]+(?:\.\d{1,2})?)/i,
             /Paid\s*[:\-]?\s*₹?\s*([\d,]+(?:\.\d{1,2})?)/i,
@@ -194,10 +191,6 @@ const createPaymentRequest = async(req, res) => {
             amountDetected: extractedAmount !== null,
             transactionDetected: transactionId !== null
         };
-
-        console.log("========== OCR RESULT ==========");
-        console.log(extractedInfo);
-        console.log("================================");
         const contributionAmount =
             Number(
                 (
