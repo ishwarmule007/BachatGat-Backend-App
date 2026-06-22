@@ -98,7 +98,7 @@ const createPaymentRequest = async(req, res) => {
                 message: "Payment request already pending for this month",
             });
         }
-        const processedImage = await sharp(req.file.buffer)
+        const processedImageBuffer = await sharp(req.file.buffer)
             .resize({ width: 1500 })
             .grayscale()
             .normalize()
@@ -107,7 +107,7 @@ const createPaymentRequest = async(req, res) => {
             .toBuffer();
 
         const ocrResult = await Tesseract.recognize(
-            processedImage,
+            processedImageBuffer,
             "eng",
         );
         const extractedText = ocrResult.data.text;
@@ -280,7 +280,7 @@ const createPaymentRequest = async(req, res) => {
                         );
                     streamifier
                         .createReadStream(
-                            processedImage
+                            processedImageBuffer
                         )
                         .pipe(uploadStream);
                 }
