@@ -117,49 +117,94 @@ const createPaymentRequest = async(req, res) => {
 
                 "eng"
             );
+        const extractedText = ocrResult.data.text;
+        console.log("========== OCR TEXT ==========");
+        console.log(extractedText);
+        console.log("==============================");
+        const amountPatterns = [
+            /Amount\s*[:\-]?\s*₹?\s*([\d,]+(?:\.\d{1,2})?)/i,
+            /Paid\s*[:\-]?\s*₹?\s*([\d,]+(?:\.\d{1,2})?)/i,
+            /₹\s*([\d,]+(?:\.\d{1,2})?)/,
+            /Rs\.?\s*([\d,]+(?:\.\d{1,2})?)/i,
+            /INR\s*([\d,]+(?:\.\d{1,2})?)/i
+        ];
 
-        const extractedText =
-            ocrResult.data.text;
+        let extractedAmount = null;
 
-        const amountMatch =
-            extractedText.match(
-                /₹\s*([\d,]+(?:\.\d+)?)/i
-            );
-        const transactionIdMatch =
-            extractedText.match(
-                /Transaction\s*ID\s*([A-Z0-9]+)/i
-            );
-        const utrMatch =
-            extractedText.match(
-                /UTR[:\s]*([A-Z0-9]+)/i
-            );
-        const paidToMatch =
-            extractedText.match(
-                /Paid\s*to\s*([\w\s]+)/i
-            );
-        const dateMatch =
-            extractedText.match(
-                /\d{1,2}\s+[A-Za-z]{3}\s+\d{4}/
-            );
+        for (const pattern of amountPatterns) {
+            const match = extractedText.match(pattern);
+
+            if (match) {
+                extractedAmount = Number(
+                    match[1].replace(/,/g, "")
+                );
+
+                break;
+            }
+        }
+
+        const transactionPatterns = [
+            /Transaction\s*ID\s*[:\-]?\s*([A-Z0-9]+)/i,
+            /Txn\s*ID\s*[:\-]?\s*([A-Z0-9]+)/i,
+            /UTR\s*[:\-]?\s*([A-Z0-9]+)/i,
+            /UPI\s*Ref(?:erence)?\s*(?:No)?\s*[:\-]?\s*([A-Z0-9]+)/i
+        ];
+
+        let transactionId = null;
+
+        for (const pattern of transactionPatterns) {
+            const match = extractedText.match(pattern);
+
+            if (match) {
+                transactionId = match[1];
+                break;
+            }
+        }
+        let paidTo = null;
+
+        const paidToPatterns = [
+            /Paid\s*to\s*([^\n]+)/i,
+            /To\s*([^\n]+)/i
+        ];
+
+        for (const pattern of paidToPatterns) {
+            const match = extractedText.match(pattern);
+
+            if (match) {
+                paidTo = match[1].trim();
+                break;
+            }
+        }
+        const datePatterns = [
+            /\d{1,2}\s+[A-Za-z]{3}\s+\d{4}/,
+            /\d{1,2}\/\d{1,2}\/\d{2,4}/,
+            /\d{1,2}-\d{1,2}-\d{2,4}/
+        ];
+
+        let transactionDate = null;
+
+        for (const pattern of datePatterns) {
+            const match = extractedText.match(pattern);
+
+            if (match) {
+                transactionDate = new Date(match[0]);
+                break;
+            }
+        }
         const extractedInfo = {
-            extractedAmount: amountMatch ?
-                Number(
-                    amountMatch[1]
-                    .replace(/,/g, "")
-                ) : null,
-            transactionId: transactionIdMatch ?
-                transactionIdMatch[1] :
-                (
-                    utrMatch ?
-                    utrMatch[1] :
-                    null
-                ),
-            paidTo: paidToMatch ?
-                paidToMatch[1].trim() : null,
+            extractedAmount,
+            transactionId,
+            paidTo,
             paidFrom: null,
-            transactionDate: dateMatch ?
-                new Date(dateMatch[0]) : null,
+            transactionDate,
+
+            amountDetected: extractedAmount !== null,
+            transactionDetected: transactionId !== null
         };
+
+        console.log("========== OCR RESULT ==========");
+        console.log(extractedInfo);
+        console.log("================================");
         const contributionAmount =
             Number(
                 (
