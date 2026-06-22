@@ -280,7 +280,7 @@ const createPaymentRequest = async(req, res) => {
                         );
                     streamifier
                         .createReadStream(
-                            processedImageBuffer
+                            processedImage
                         )
                         .pipe(uploadStream);
                 }
