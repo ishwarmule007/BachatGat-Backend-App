@@ -11,7 +11,11 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String
     },
-    roleSelection: { type: String, enum: ['admin', 'user'], required: true },
+    roleSelection: {
+        type: String,
+        enum: ['president', 'secretary', 'treasurer', 'member'],
+        required: true
+    },
     gender: { type: String },
     dateOfBirth: { type: Date },
     prefferredLanguage: {
