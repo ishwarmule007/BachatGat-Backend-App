@@ -52,7 +52,7 @@ const loanRequestSchema =
             default: "PENDING"
         },
 
-        adminProposal: {
+        presidentProposal: {
 
             approvedAmount: {
                 type: Number

@@ -42,7 +42,23 @@ const groupSchema = new mongoose.Schema({
         enum: ["active", "closed"],
         default: "active"
     },
-    adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    presidentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
+
+    secretaryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+    },
+
+    treasurerId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+    },
     members: [{
         userId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -57,7 +73,7 @@ const groupSchema = new mongoose.Schema({
 
         roleInGroup: {
             type: String,
-            enum: ["admin", "member"],
+            enum: ["president", "secretary", "treasurer", "member"],
             default: "member"
         },
 

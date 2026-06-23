@@ -7,9 +7,15 @@ const announcementSchema = new mongoose.Schema({
         required: true
     },
 
-    adminId: {
+    createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
+        required: true
+    },
+
+    createdByRole: {
+        type: String,
+        enum: ["president", "secretary"],
         required: true
     },
 
