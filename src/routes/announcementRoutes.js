@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
 
-const authMiddleware = require("../middlewares/authMiddleware");
-
+const presidentMiddleware = require('../middlewares/presidentMiddleware');
+const secretaryMiddleware = require('../middlewares/secretaryMiddleware');
+const treasurerMiddleware = require('../middlewares/treasurerMiddleware');
 const {
     createAnnouncement,
     getGroupAnnouncements,
