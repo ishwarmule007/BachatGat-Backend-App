@@ -68,6 +68,18 @@ router.put(
  *                 message:
  *                   type: string
  *                   example: "Group members fetched successfully"
+ *                 admin:
+ *                   type: object
+ *                   properties:
+ *                     adminId:
+ *                       type: string
+ *                       example: "665c1f9a2b7d8f1234567890"
+ *                     fullName:
+ *                       type: string
+ *                       example: "Rahul Sharma"
+ *                     roleInGroup:
+ *                       type: string
+ *                       example: "admin"
  *                 members:
  *                   type: array
  *                   items:
