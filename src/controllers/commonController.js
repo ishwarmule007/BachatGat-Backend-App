@@ -59,8 +59,16 @@ const getGroupMembers = async(req, res) => {
                     "failed" : member.status || "pending",
             })
         );
+        const adminId = await User.findById(group.adminId);
+
+        const admin = {
+            adminId: group.adminId,
+            fullName: adminId.fullName,
+            roleInGroup: "admin"
+        };
         res.status(200).json({
             message: "Group members fetched successfully",
+            admin,
             members
         });
     } catch (error) {
