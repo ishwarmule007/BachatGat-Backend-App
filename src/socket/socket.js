@@ -74,16 +74,21 @@ const initializeSocket = (server) => {
                     });
                 }
                 const userId = socket.user._id;
-                const isAdmin =
-                    group.adminId &&
-                    group.adminId.toString() === userId.toString();
-
+                const isPresident =
+                    group.presidentId &&
+                    group.presidentId.toString() === userId.toString();
+                const isSecretary =
+                    group.secretaryId &&
+                    group.secretaryId.toString() === userId.toString();
+                const isTreasurer =
+                    group.treasurerId &&
+                    group.treasurerId.toString() === userId.toString();
                 const member = group.members.find(
                     (m) =>
                     m.userId &&
                     ((m.userId._id || m.userId).toString() === userId.toString())
                 );
-                if (!isAdmin) {
+                if (!isTreasurer && !isPresident && !isSecretary) {
                     if (!member || member.status !== "approved") {
                         return socket.emit("errorMessage", {
                             message: "You are not approved member of this group"
@@ -256,16 +261,21 @@ const initializeSocket = (server) => {
                         );
                     }
                     const userId = socket.user._id;
-                    const isAdmin =
-                        group.adminId &&
-                        group.adminId.toString() === userId.toString();
-
+                    const isPresident =
+                        group.presidentId &&
+                        group.presidentId.toString() === userId.toString();
+                    const isSecretary =
+                        group.secretaryId &&
+                        group.secretaryId.toString() === userId.toString();
+                    const isTreasurer =
+                        group.treasurerId &&
+                        group.treasurerId.toString() === userId.toString();
                     const member = group.members.find(
                         (m) =>
                         m.userId &&
                         ((m.userId._id || m.userId).toString() === userId.toString())
                     );
-                    if (!isAdmin) {
+                    if (!isPresident && !isSecretary && !isTreasurer) {
                         if (!member || member.status !== "approved") {
                             return socket.emit("errorMessage", {
                                 message: "You are not approved member of this group"
@@ -422,16 +432,21 @@ const initializeSocket = (server) => {
                 }
 
                 const userId = socket.user._id;
-                const isAdmin =
-                    group.adminId &&
-                    group.adminId.toString() === userId.toString();
-
+                const isPresident =
+                    group.presidentId &&
+                    group.presidentId.toString() === userId.toString();
+                const isSecretary =
+                    group.secretaryId &&
+                    group.secretaryId.toString() === userId.toString();
+                const isTreasurer =
+                    group.treasurerId &&
+                    group.treasurerId.toString() === userId.toString();
                 const member = group.members.find(
                     (m) =>
                     m.userId &&
                     ((m.userId._id || m.userId).toString() === userId.toString())
                 );
-                if (!isAdmin) {
+                if (!isPresident && !isSecretary && !isTreasurer) {
                     if (!member || member.status !== "approved") {
                         return socket.emit("errorMessage", {
                             message: "You are not approved member of this group"
@@ -442,7 +457,7 @@ const initializeSocket = (server) => {
                 const isOwnMessage =
                     message.senderId.toString() === socket.user._id.toString();
 
-                if (!isOwnMessage && !isAdmin) {
+                if (!isOwnMessage && !isPresident) {
                     return socket.emit("errorMessage", {
                         message: "You can delete only your own message"
                     });
@@ -494,13 +509,12 @@ const initializeSocket = (server) => {
                     });
                 }
 
-                const isAdmin =
-                    group.adminId &&
-                    group.adminId.toString() === socket.user._id.toString();
-
-                if (!isAdmin) {
+                const isPresident =
+                    group.presidentId &&
+                    group.presidentId.toString() === userId.toString();
+                if (!isPresident) {
                     return socket.emit("errorMessage", {
-                        message: "Only admin can pin message"
+                        message: "Only President can pin message"
                     });
                 }
 
@@ -551,13 +565,13 @@ const initializeSocket = (server) => {
                     });
                 }
 
-                const isAdmin =
-                    group.adminId &&
-                    group.adminId.toString() === socket.user._id.toString();
+                const isPresident =
+                    group.presidentId &&
+                    group.presidentId.toString() === userId.toString();
 
-                if (!isAdmin) {
+                if (!isPresident) {
                     return socket.emit("errorMessage", {
-                        message: "Only admin can unpin message"
+                        message: "Only president can unpin message"
                     });
                 }
 
@@ -606,16 +620,21 @@ const initializeSocket = (server) => {
                 }
 
                 const userId = socket.user._id;
-                const isAdmin =
-                    group.adminId &&
-                    group.adminId.toString() === userId.toString();
-
+                const isPresident =
+                    group.presidentId &&
+                    group.presidentId.toString() === userId.toString();
+                const isSecretary =
+                    group.secretaryId &&
+                    group.secretaryId.toString() === userId.toString();
+                const isTreasurer =
+                    group.treasurerId &&
+                    group.treasurerId.toString() === userId.toString();
                 const member = group.members.find(
                     (m) =>
                     m.userId &&
                     ((m.userId._id || m.userId).toString() === userId.toString())
                 );
-                if (!isAdmin) {
+                if (!isPresident && !isSecretary && !isTreasurer) {
                     if (!member || member.status !== "approved") {
                         return socket.emit("errorMessage", {
                             message: "You are not approved member of this group"
@@ -681,29 +700,28 @@ const initializeSocket = (server) => {
                 }
 
                 const userId = socket.user._id;
-                const isAdmin =
-                    group.adminId &&
-                    group.adminId.toString() === userId.toString();
-
+                const isPresident =
+                    group.presidentId &&
+                    group.presidentId.toString() === userId.toString();
+                const isSecretary =
+                    group.secretaryId &&
+                    group.secretaryId.toString() === userId.toString();
+                const isTreasurer =
+                    group.treasurerId &&
+                    group.treasurerId.toString() === userId.toString();
                 const member = group.members.find(
                     (m) =>
                     m.userId &&
                     ((m.userId._id || m.userId).toString() === userId.toString())
                 );
-                if (!isAdmin) {
+                if (!isPresident && !isSecretary && !isTreasurer) {
                     if (!member || member.status !== "approved") {
                         return socket.emit("errorMessage", {
                             message: "You are not approved member of this group"
                         });
                     }
                 }
-                if (!isAdmin) {
-                    if (!member || member.status !== "approved") {
-                        return socket.emit("errorMessage", {
-                            message: "You are not approved member of this group"
-                        });
-                    }
-                }
+
 
                 message.reactions = message.reactions.filter(
                     (reaction) =>
@@ -753,16 +771,21 @@ const initializeSocket = (server) => {
                 }
 
                 const userId = socket.user._id;
-                const isAdmin =
-                    group.adminId &&
-                    group.adminId.toString() === userId.toString();
-
+                const isPresident =
+                    group.presidentId &&
+                    group.presidentId.toString() === userId.toString();
+                const isSecretary =
+                    group.secretaryId &&
+                    group.secretaryId.toString() === userId.toString();
+                const isTreasurer =
+                    group.treasurerId &&
+                    group.treasurerId.toString() === userId.toString();
                 const member = group.members.find(
                     (m) =>
                     m.userId &&
                     ((m.userId._id || m.userId).toString() === userId.toString())
                 );
-                if (!isAdmin) {
+                if (!isPresident && !isSecretary && !isTreasurer) {
                     if (!member || member.status !== "approved") {
                         return socket.emit("errorMessage", {
                             message: "You are not approved member of this group"
@@ -821,16 +844,21 @@ const initializeSocket = (server) => {
                 }
 
                 const userId = socket.user._id;
-                const isAdmin =
-                    group.adminId &&
-                    group.adminId.toString() === userId.toString();
-
+                const isPresident =
+                    group.presidentId &&
+                    group.presidentId.toString() === userId.toString();
+                const isSecretary =
+                    group.secretaryId &&
+                    group.secretaryId.toString() === userId.toString();
+                const isTreasurer =
+                    group.treasurerId &&
+                    group.treasurerId.toString() === userId.toString();
                 const member = group.members.find(
                     (m) =>
                     m.userId &&
                     ((m.userId._id || m.userId).toString() === userId.toString())
                 );
-                if (!isAdmin) {
+                if (!isPresident && !isSecretary && !isTreasurer) {
                     if (!member || member.status !== "approved") {
                         return socket.emit("errorMessage", {
                             message: "You are not approved member of this group"
