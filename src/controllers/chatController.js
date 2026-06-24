@@ -20,16 +20,21 @@ const getGroupMessages = async(req, res) => {
                 message: "Group not found",
             });
         }
-
-        const isAdmin =
-            group.adminId &&
-            group.adminId.toString() === userId.toString();
+        const isPresident =
+            group.presidentId &&
+            group.presidentId.toString() === userId.toString();
+        const isSecretary =
+            group.secretaryId &&
+            group.secretaryId.toString() === userId.toString();
+        const isTreasurer =
+            group.treasurerId &&
+            group.treasurerId.toString() === userId.toString();
         const member = group.members.find(
             (m) =>
             m.userId &&
-            m.userId._id.toString() === userId.toString()
+            ((m.userId._id || m.userId).toString() === userId.toString())
         );
-        if (!isAdmin) {
+        if (!isTreasurer && !isPresident && !isSecretary) {
             if (!member || member.status !== "approved") {
                 return res.status(403).json({
                     message: "You are not approved member of this group"
@@ -130,16 +135,21 @@ const clearChatForMe = async(req, res) => {
             return res.status(404).json({ message: "Group not found" });
         }
 
-        const isAdmin =
-            group.adminId &&
-            group.adminId.toString() === userId.toString();
-
+        const isPresident =
+            group.presidentId &&
+            group.presidentId.toString() === userId.toString();
+        const isSecretary =
+            group.secretaryId &&
+            group.secretaryId.toString() === userId.toString();
+        const isTreasurer =
+            group.treasurerId &&
+            group.treasurerId.toString() === userId.toString();
         const member = group.members.find(
             (m) =>
             m.userId &&
-            m.userId._id.toString() === userId.toString()
+            ((m.userId._id || m.userId).toString() === userId.toString())
         );
-        if (!isAdmin) {
+        if (!isTreasurer && !isPresident && !isSecretary) {
             if (!member || member.status !== "approved") {
                 return res.status(403).json({
                     message: "You are not approved member of this group"
