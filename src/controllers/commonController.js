@@ -59,9 +59,34 @@ const getGroupMembers = async(req, res) => {
                     "failed" : member.status || "pending",
             })
         );
+        const presidentId = await User.findById(group.presidentId);
+
+        const President = {
+            adminId: group.adminId,
+            fullName: presidentId.fullName,
+            roleInGroup: "president"
+        };
+        const secretaryId = await User.findById(group.secretaryId);
+
+        const Secretary = {
+            adminId: group.adminId,
+            fullName: secretaryId.fullName,
+            roleInGroup: "secretary"
+        };
+        const treasurerId = await User.findById(group.treasurerId);
+
+        const Treasurer = {
+            adminId: group.adminId,
+            fullName: treasurerId.fullName,
+            roleInGroup: "treasurer"
+        };
         res.status(200).json({
             message: "Group members fetched successfully",
+            President,
+            Secretary,
+            Treasurer,
             members
+
         });
     } catch (error) {
         res.status(500).json({
@@ -88,17 +113,21 @@ const getGroupDetails = async(req, res) => {
             });
         }
 
-        let isAdmin = false;
-
-        if (user.roleSelection === "admin") {
-            isAdmin = group.adminId && group.adminId.toString() === userId.toString();
-        }
+        const isPresident =
+            group.presidentId &&
+            group.presidentId.toString() === userId.toString();
+        const isSecretary =
+            group.secretaryId &&
+            group.secretaryId.toString() === userId.toString();
+        const isTreasurer =
+            group.treasurerId &&
+            group.treasurerId.toString() === userId.toString();
         const member = group.members.find(
             (m) =>
             m.userId &&
             m.userId._id.toString() === userId.toString()
         );
-        if (!isAdmin) {
+        if (!isPresident && !isSecretary && !isTreasurer) {
             if (!member || member.status !== "approved") {
                 return res.status(403).json({
                     message: "You are not approved member of this group"
@@ -162,10 +191,22 @@ const getMyGroups = async(req, res) => {
 
         let groups = [];
 
-        if (user.roleSelection === "admin") {
+        if (user.roleSelection === "president") {
 
             groups = await Group.find({
-                adminId: userId
+                presidentId: userId
+            });
+
+        } else if (user.roleSelection === "secretary") {
+
+            groups = await Group.find({
+                secretaryId: userId
+            });
+
+        } else if (user.roleSelection === "treasurer") {
+
+            groups = await Group.find({
+                treasurerId: userId
             });
 
         } else {
