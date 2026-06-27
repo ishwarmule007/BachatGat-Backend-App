@@ -1,5 +1,17 @@
 const express = require('express');
 const app = express();
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400) {
+        console.error("Invalid JSON");
+        console.error("Endpoint:", req.method, req.originalUrl);
+        console.error("Body:", err.body);
+
+        return res.status(400).json({
+            message: "Invalid JSON",
+        });
+    }
+    next(err);
+});
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./utils/swagger");
 const cors = require('cors');
