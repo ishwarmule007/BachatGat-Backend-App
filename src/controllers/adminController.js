@@ -26,9 +26,21 @@ const updateProfile = async(req, res) => {
         if (fullName !== undefined)
             updateData.fullName = fullName;
 
-        if (mobileNumber !== undefined)
-            updateData.mobileNumber = mobileNumber;
+        if (mobileNumber !== undefined) {
+            const existingUser = await User.findOne({
+                mobileNumber,
+                _id: { $ne: userId }
+            });
 
+            if (existingUser) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Mobile number already exists"
+                });
+            }
+
+            updateData.mobileNumber = mobileNumber;
+        }
         if (address !== undefined)
             updateData.address = address;
 
