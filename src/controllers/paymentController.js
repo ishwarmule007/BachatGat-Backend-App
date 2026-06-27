@@ -451,8 +451,10 @@ const getPaymentDetails = async(req, res) => {
         const paymentLink =
             `upi://pay?pa=${encodeURIComponent(ownerUpiId)}` +
             `&pn=${encodeURIComponent(ownerName)}` +
-            `&am=${contributionAmount.toFixed(2)}` +
-            `&cu=INR`;
+            `&am=${Number(amount).toFixed(2)}` +
+            `&cu=INR` +
+            `&tn=${encodeURIComponent("Contribution")}`;
+
 
         return res.status(200).json({
 
