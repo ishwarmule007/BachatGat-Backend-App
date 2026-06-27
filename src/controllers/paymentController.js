@@ -92,7 +92,7 @@ const createPaymentRequest = async(req, res) => {
                 status: "pending",
             });
 
-        if (existingPendingRequest) {
+        if (!existingPendingRequest) {
             return res.status(400).json({
                 success: false,
                 message: "Payment request already pending for this month",
