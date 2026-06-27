@@ -475,7 +475,7 @@ const getPaymentDetails = async(req, res) => {
 
                     accountNumber: group.adminId.bankDetails ? group.adminId.bankAccountDetails.accountNumber || null : null,
 
-                    ifscCode: group.adminId.bankDetails ? group.adminId.bankAccountDetails.ifscCode || null : null;
+                    ifscCode: group.adminId.bankDetails ? group.adminId.bankAccountDetails.ifscCode || null : null,
                 },
             },
 
