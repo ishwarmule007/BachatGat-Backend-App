@@ -469,13 +469,13 @@ const getPaymentDetails = async(req, res) => {
                 profilePicture: group.adminId.profilePicture,
 
                 bankDetails: {
-                    accountHolderName: group.adminId.bankDetails ? .accountHolderName || null,
+                    accountHolderName: group.adminId.bankAccountDetails ? group.adminId.bankAccountDetails.accountHolderName || null : null,
 
-                    bankName: group.adminId.bankDetails ? .bankName || null,
+                    bankName: group.adminId.bankDetails ? group.adminId.bankAccountDetails.bankName || null : null,
 
-                    accountNumber: group.adminId.bankDetails ? .accountNumber || null,
+                    accountNumber: group.adminId.bankDetails ? group.adminId.bankAccountDetails.accountNumber || null : null,
 
-                    ifscCode: group.adminId.bankDetails ? .ifscCode || null,
+                    ifscCode: group.adminId.bankDetails ? group.adminId.bankAccountDetails.ifscCode || null : null;
                 },
             },
 
