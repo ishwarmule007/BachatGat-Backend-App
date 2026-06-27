@@ -353,9 +353,7 @@ const createPaymentRequest = async(req, res) => {
     }
 };
 const getPaymentDetails = async(req, res) => {
-
     try {
-
         const { groupCode } = req.body;
 
         if (!groupCode) {
@@ -365,17 +363,9 @@ const getPaymentDetails = async(req, res) => {
             });
         }
 
-        const group = await Group.findOne({
-            groupCode
-        }).populate(
+        const group = await Group.findOne({ groupCode }).populate(
             "adminId",
-            `
-            fullName
-            mobileNumber
-            upiId
-            profilePicture
-            bankDetails
-            `
+            "fullName mobileNumber upiId profilePicture bankDetails"
         );
 
         if (!group) {
@@ -385,10 +375,17 @@ const getPaymentDetails = async(req, res) => {
             });
         }
 
+        if (!group.adminId) {
+            return res.status(500).json({
+                success: false,
+                message: "Group admin not found",
+            });
+        }
+
         const member = group.members.find(
             (member) =>
-            member.userId.toString() ===
-            req.user._id.toString() &&
+            member.userId &&
+            member.userId.toString() === req.user._id.toString() &&
             member.status === "approved"
         );
 
@@ -400,9 +397,7 @@ const getPaymentDetails = async(req, res) => {
         }
 
         const contributionAmount = Number(
-            (
-                member.monthlyContribution || 0
-            ).toFixed(2)
+            (member.monthlyContribution || 0).toFixed(2)
         );
 
         if (contributionAmount <= 0) {
@@ -414,18 +409,16 @@ const getPaymentDetails = async(req, res) => {
 
         const currentDate = new Date();
 
-        const currentMonth =
-            `${currentDate.getFullYear()}-${String(
-                currentDate.getMonth() + 1
-            ).padStart(2, "0")}`;
+        const currentMonth = `${currentDate.getFullYear()}-${String(
+            currentDate.getMonth() + 1
+        ).padStart(2, "0")}`;
 
-        const existingContribution =
-            await Contribution.findOne({
-                userId: req.user._id,
-                groupId: group._id,
-                month: currentMonth,
-                status: "paid",
-            });
+        const existingContribution = await Contribution.findOne({
+            userId: req.user._id,
+            groupId: group._id,
+            month: currentMonth,
+            status: "paid",
+        });
 
         if (existingContribution) {
             return res.status(400).json({
@@ -434,80 +427,66 @@ const getPaymentDetails = async(req, res) => {
             });
         }
 
-        const existingPendingRequest =
-            await PaymentRequest.findOne({
-                userId: req.user._id,
-                groupId: group._id,
-                month: currentMonth,
-                status: "pending",
+        const existingPendingRequest = await PaymentRequest.findOne({
+            userId: req.user._id,
+            groupId: group._id,
+            month: currentMonth,
+            status: "pending",
+        });
+
+        const ownerName = group.adminId.fullName;
+        const ownerUpiId = group.adminId.upiId;
+
+        if (!ownerUpiId) {
+            return res.status(400).json({
+                success: false,
+                message: "Group admin has not configured a UPI ID",
             });
-
-        const ownerName =
-            group.adminId.fullName;
-
-        const ownerUpiId =
-            group.adminId.upiId;
+        }
 
         const paymentLink =
             `upi://pay?pa=${encodeURIComponent(ownerUpiId)}` +
             `&pn=${encodeURIComponent(ownerName)}` +
-            `&am=${Number(amount).toFixed(2)}` +
+            `&am=${contributionAmount.toFixed(2)}` +
             `&cu=INR` +
             `&tn=${encodeURIComponent("Contribution")}`;
 
-
         return res.status(200).json({
-
             success: true,
-
             message: "Payment details fetched successfully",
 
             payment: {
-
                 paymentMonth: currentMonth,
-
                 contributionAmount,
-
                 totalAmount: contributionAmount,
             },
 
             ownerPaymentDetails: {
-
                 ownerId: group.adminId._id,
-
                 ownerName,
-
                 upiId: ownerUpiId,
-
                 mobileNumber: group.adminId.mobileNumber,
-
                 profilePicture: group.adminId.profilePicture,
 
                 bankDetails: {
+                    accountHolderName: group.adminId.bankDetails ? .accountHolderName || null,
 
-                    accountHolderName: group.adminId.bankDetails ? group.adminId.bankDetails.
-                    accountHolderName || null: null,
+                    bankName: group.adminId.bankDetails ? .bankName || null,
 
-                    bankName: group.adminId.bankDetails ? group.adminId.bankDetails.
-                    bankName || null: null,
+                    accountNumber: group.adminId.bankDetails ? .accountNumber || null,
 
-                    accountNumber: group.adminId.bankDetails ? group.adminId.bankDetails.
-                    accountNumber || null: null,
-
-                    ifscCode: group.adminId.bankDetails ? group.adminId.bankDetails.
-                    ifscCode || null: null,
-                }
+                    ifscCode: group.adminId.bankDetails ? .ifscCode || null,
+                },
             },
 
             paymentLink,
 
             alreadyPaid: false,
 
-            pendingRequest:
-                !!existingPendingRequest,
+            pendingRequest: !!existingPendingRequest,
         });
-
     } catch (error) {
+        console.error(error);
 
         return res.status(500).json({
             success: false,
