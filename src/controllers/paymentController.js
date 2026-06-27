@@ -154,7 +154,7 @@ const createPaymentRequest = async(req, res) => {
 
         const paidToPatterns = [
             /Paid\s*to\s*([^\n]+)/i,
-            /To\s*([^\n]+)/i
+            /^\s*To\b\s*([^\n]+)/im
         ];
 
         for (const pattern of paidToPatterns) {
@@ -167,8 +167,8 @@ const createPaymentRequest = async(req, res) => {
         }
         const datePatterns = [
             /\d{1,2}\s+[A-Za-z]{3}\s+\d{4}/,
-            /\d{1,2}\/\d{1,2}\/\d{2,4}/,
-            /\d{1,2}-\d{1,2}-\d{2,4}/
+            /(\d{1,2})\/(\d{1,2})\/(\d{2,4})/,
+            /(\d{1,2})-(\d{1,2})-(\d{2,4})/
         ];
 
         let transactionDate = null;
@@ -176,10 +176,20 @@ const createPaymentRequest = async(req, res) => {
         for (const pattern of datePatterns) {
             const match = extractedText.match(pattern);
 
-            if (match) {
+            if (!match) continue;
+            if (pattern === datePatterns[0]) {
                 transactionDate = new Date(match[0]);
-                break;
+            } else {
+                const day = Number(match[1]);
+                const month = Number(match[2]);
+                let year = Number(match[3]);
+
+                if (year < 100) year += 2000;
+
+                transactionDate = new Date(year, month - 1, day);
             }
+
+            break;
         }
         const extractedInfo = {
             extractedAmount,
@@ -272,9 +282,7 @@ const createPaymentRequest = async(req, res) => {
                             }
                         );
                     streamifier
-                        .createReadStream(
-                            processedImageBuffer
-                        )
+                        .createReadStream(req.file.buffer)
                         .pipe(uploadStream);
                 }
             );
