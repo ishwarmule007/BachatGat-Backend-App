@@ -59,11 +59,18 @@ const getGroupMembers = async(req, res) => {
                     "failed" : member.status || "pending",
             })
         );
-        const adminId = await User.findById(group.adminId);
+        const adminUser = await User.findById(group.adminId);
+
+        if (!adminUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Group admin not found"
+            });
+        }
 
         const admin = {
             adminId: group.adminId,
-            fullName: adminId.fullName,
+            fullName: adminUser.fullName,
             roleInGroup: "admin"
         };
         res.status(200).json({
