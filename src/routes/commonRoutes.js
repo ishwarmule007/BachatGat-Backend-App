@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, archiveGroup, unarchiveGroup } = require("../controllers/commonController");
+const { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, archiveGroup, unarchiveGroup, getRecentActivity } = require("../controllers/commonController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
 
