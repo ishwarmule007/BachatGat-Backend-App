@@ -685,7 +685,31 @@ const getAdminPaymentDashboard = async(req, res) => {
 
         const receivedTotal = receivedThisMonth[0] ? receivedThisMonth[0].total || 0 : 0;
         const receivedCount = receivedThisMonth[0] ? receivedThisMonth[0].count || 0 : 0;
+        // Today's recent activity
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
 
+        const recentActivity = await Notification.find({
+                userId: adminId,
+                createdAt: { $gte: startOfToday }
+            })
+            .populate("groupId", "groupName groupCode")
+            .sort({ createdAt: -1 })
+            .limit(10);
+
+        const formattedRecentActivity = recentActivity.map((notification) => ({
+            notificationId: notification._id,
+            title: notification.title,
+            message: notification.message,
+            type: notification.type,
+            isRead: notification.isRead,
+
+            groupId: notification.groupId ? notification.groupId._id : null,
+            groupName: notification.groupId ? notification.groupId.groupName : "",
+            groupCode: notification.groupId ? notification.groupId.groupCode : "",
+
+            createdAt: notification.createdAt
+        }));
         res.status(200).json({
             message: "Admin payment dashboard fetched successfully",
             currentMonth,
@@ -699,6 +723,8 @@ const getAdminPaymentDashboard = async(req, res) => {
             pendingAmount,
 
             pendingRequests: formattedPendingRequests,
+
+            recentActivity: formattedRecentActivity
         });
     } catch (error) {
         res.status(500).json({
