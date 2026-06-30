@@ -471,11 +471,11 @@ const getPaymentDetails = async(req, res) => {
                 bankDetails: {
                     accountHolderName: group.adminId.bankAccountDetails ? group.adminId.bankAccountDetails.accountHolderName || null : null,
 
-                    bankName: group.adminId.bankDetails ? group.adminId.bankAccountDetails.bankName || null : null,
+                    bankName: group.adminId.bankAccountDetails ? group.adminId.bankAccountDetails.bankName || null : null,
 
-                    accountNumber: group.adminId.bankDetails ? group.adminId.bankAccountDetails.accountNumber || null : null,
+                    accountNumber: group.adminId.bankAccountDetails ? group.adminId.bankAccountDetails.accountNumber || null : null,
 
-                    ifscCode: group.adminId.bankDetails ? group.adminId.bankAccountDetails.ifscCode || null : null,
+                    ifscCode: group.adminId.bankAccountDetails ? group.adminId.bankAccountDetails.ifscCode || null : null,
                 },
             },
 
