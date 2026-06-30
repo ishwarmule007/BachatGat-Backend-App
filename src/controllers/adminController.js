@@ -7,6 +7,74 @@ const Contribution = require('../models/contribution');
 const PaymentRequest = require('../models/PaymentRequest');
 const geocodeAddress = require("../utils/geocodeAddress");
 const sendSMS = require("../utils/sendSMS");
+/*to update the the profile of the admin 
+for now using patch for updation of 
+fullName,mobileNumber,address,dateofBirth*/
+const updateProfile = async(req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const {
+            fullName,
+            mobileNumber,
+            address,
+            dateOfBirth
+        } = req.body;
+
+        const updateData = {};
+
+        if (fullName !== undefined)
+            updateData.fullName = fullName;
+
+        if (mobileNumber !== undefined) {
+            const existingUser = await User.findOne({
+                mobileNumber,
+                _id: { $ne: userId }
+            });
+
+            if (existingUser) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Mobile number already exists"
+                });
+            }
+
+            updateData.mobileNumber = mobileNumber;
+        }
+        if (address !== undefined)
+            updateData.address = address;
+
+        if (dateOfBirth !== undefined)
+            updateData.dateOfBirth = dateOfBirth;
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            updateData, {
+                new: true,
+                runValidators: true
+            }
+        ).select("-password");
+
+        if (!updatedUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Profile updated successfully",
+            data: updatedUser
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
 
 const registerAdmin = async(req, res) => {
     try {
@@ -617,6 +685,9 @@ const getAdminPaymentDashboard = async(req, res) => {
 
         const receivedTotal = receivedThisMonth[0] ? receivedThisMonth[0].total || 0 : 0;
         const receivedCount = receivedThisMonth[0] ? receivedThisMonth[0].count || 0 : 0;
+        // Today's recent activity
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
 
         res.status(200).json({
             message: "Admin payment dashboard fetched successfully",
@@ -631,6 +702,8 @@ const getAdminPaymentDashboard = async(req, res) => {
             pendingAmount,
 
             pendingRequests: formattedPendingRequests,
+
+            recentActivity: formattedRecentActivity
         });
     } catch (error) {
         res.status(500).json({
@@ -909,5 +982,6 @@ module.exports = {
     removeMemberFromGroup,
     getGroupsWithMembers,
     editMemberByAdmin,
-    deleteGroupByAdmin
+    deleteGroupByAdmin,
+    updateProfile
 };

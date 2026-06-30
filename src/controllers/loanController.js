@@ -1,3 +1,6 @@
+//loan is slow is not started
+
+
 /*const Loan = require("../models / Loan ");
 const Installment = require("../models/Installment");
 const Group = require("../models/Group");

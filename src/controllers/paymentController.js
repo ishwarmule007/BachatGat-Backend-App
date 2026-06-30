@@ -1,3 +1,5 @@
+//loan part commented right now 
+
 const PaymentRequest = require("../models/PaymentRequest");
 const Contribution = require("../models/contribution");
 const Group = require("../models/Group");
@@ -96,67 +98,108 @@ const createPaymentRequest = async(req, res) => {
                 message: "Payment request already pending for this month",
             });
         }
-        const compressedImageBuffer =
-            await sharp(req.file.buffer)
+        const processedImageBuffer = await sharp(req.file.buffer)
+            .resize({ width: 1500 })
+            .grayscale()
+            .normalize()
+            .sharpen()
+            .png()
+            .toBuffer();
 
-        .resize({
-            width: 800
-        })
+        const ocrResult = await Tesseract.recognize(
+            processedImageBuffer,
+            "eng",
+        );
+        const extractedText = ocrResult.data.text;
+        const amountPatterns = [
+            /Amount\s*[:\-]?\s*₹?\s*([\d,]+(?:\.\d{1,2})?)/i,
+            /Paid\s*[:\-]?\s*₹?\s*([\d,]+(?:\.\d{1,2})?)/i,
+            /₹\s*([\d,]+(?:\.\d{1,2})?)/,
+            /Rs\.?\s*([\d,]+(?:\.\d{1,2})?)/i,
+            /INR\s*([\d,]+(?:\.\d{1,2})?)/i
+        ];
 
-        .jpeg({
-            quality: 60
-        })
+        let extractedAmount = null;
 
-        .toBuffer();
-        const ocrResult =
-            await Tesseract.recognize(
+        for (const pattern of amountPatterns) {
+            const match = extractedText.match(pattern);
 
-                compressedImageBuffer,
+            if (match) {
+                extractedAmount = Number(
+                    match[1].replace(/,/g, "")
+                );
 
-                "eng"
-            );
+                break;
+            }
+        }
 
-        const extractedText =
-            ocrResult.data.text;
+        const transactionPatterns = [
+            /Transaction\s*ID\s*[:\-]?\s*([A-Z0-9]+)/i,
+            /Txn\s*ID\s*[:\-]?\s*([A-Z0-9]+)/i,
+            /UTR\s*[:\-]?\s*([A-Z0-9]+)/i,
+            /UPI\s*Ref(?:erence)?\s*(?:No)?\s*[:\-]?\s*([A-Z0-9]+)/i
+        ];
 
-        const amountMatch =
-            extractedText.match(
-                /₹\s*([\d,]+(?:\.\d+)?)/i
-            );
-        const transactionIdMatch =
-            extractedText.match(
-                /Transaction\s*ID\s*([A-Z0-9]+)/i
-            );
-        const utrMatch =
-            extractedText.match(
-                /UTR[:\s]*([A-Z0-9]+)/i
-            );
-        const paidToMatch =
-            extractedText.match(
-                /Paid\s*to\s*([\w\s]+)/i
-            );
-        const dateMatch =
-            extractedText.match(
-                /\d{1,2}\s+[A-Za-z]{3}\s+\d{4}/
-            );
+        let transactionId = null;
+
+        for (const pattern of transactionPatterns) {
+            const match = extractedText.match(pattern);
+
+            if (match) {
+                transactionId = match[1];
+                break;
+            }
+        }
+        let paidTo = null;
+
+        const paidToPatterns = [
+            /Paid\s*to\s*([^\n]+)/i,
+            /^\s*To\b\s*([^\n]+)/im
+        ];
+
+        for (const pattern of paidToPatterns) {
+            const match = extractedText.match(pattern);
+
+            if (match) {
+                paidTo = match[1].trim();
+                break;
+            }
+        }
+        const datePatterns = [
+            /\d{1,2}\s+[A-Za-z]{3}\s+\d{4}/,
+            /(\d{1,2})\/(\d{1,2})\/(\d{2,4})/,
+            /(\d{1,2})-(\d{1,2})-(\d{2,4})/
+        ];
+
+        let transactionDate = null;
+
+        for (const pattern of datePatterns) {
+            const match = extractedText.match(pattern);
+
+            if (!match) continue;
+            if (pattern === datePatterns[0]) {
+                transactionDate = new Date(match[0]);
+            } else {
+                const day = Number(match[1]);
+                const month = Number(match[2]);
+                let year = Number(match[3]);
+
+                if (year < 100) year += 2000;
+
+                transactionDate = new Date(year, month - 1, day);
+            }
+
+            break;
+        }
         const extractedInfo = {
-            extractedAmount: amountMatch ?
-                Number(
-                    amountMatch[1]
-                    .replace(/,/g, "")
-                ) : null,
-            transactionId: transactionIdMatch ?
-                transactionIdMatch[1] :
-                (
-                    utrMatch ?
-                    utrMatch[1] :
-                    null
-                ),
-            paidTo: paidToMatch ?
-                paidToMatch[1].trim() : null,
+            extractedAmount,
+            transactionId,
+            paidTo,
             paidFrom: null,
-            transactionDate: dateMatch ?
-                new Date(dateMatch[0]) : null,
+            transactionDate,
+
+            amountDetected: extractedAmount !== null,
+            transactionDetected: transactionId !== null
         };
         const contributionAmount =
             Number(
@@ -239,9 +282,7 @@ const createPaymentRequest = async(req, res) => {
                             }
                         );
                     streamifier
-                        .createReadStream(
-                            compressedImageBuffer
-                        )
+                        .createReadStream(req.file.buffer)
                         .pipe(uploadStream);
                 }
             );
@@ -312,9 +353,7 @@ const createPaymentRequest = async(req, res) => {
     }
 };
 const getPaymentDetails = async(req, res) => {
-
     try {
-
         const { groupCode } = req.body;
 
         if (!groupCode) {
@@ -324,17 +363,9 @@ const getPaymentDetails = async(req, res) => {
             });
         }
 
-        const group = await Group.findOne({
-            groupCode
-        }).populate(
+        const group = await Group.findOne({ groupCode }).populate(
             "adminId",
-            `
-            fullName
-            mobileNumber
-            upiId
-            profilePicture
-            bankDetails
-            `
+            "fullName mobileNumber upiId profilePicture bankDetails"
         );
 
         if (!group) {
@@ -344,10 +375,17 @@ const getPaymentDetails = async(req, res) => {
             });
         }
 
+        if (!group.adminId) {
+            return res.status(500).json({
+                success: false,
+                message: "Group admin not found",
+            });
+        }
+
         const member = group.members.find(
             (member) =>
-            member.userId.toString() ===
-            req.user._id.toString() &&
+            member.userId &&
+            member.userId.toString() === req.user._id.toString() &&
             member.status === "approved"
         );
 
@@ -359,9 +397,7 @@ const getPaymentDetails = async(req, res) => {
         }
 
         const contributionAmount = Number(
-            (
-                member.monthlyContribution || 0
-            ).toFixed(2)
+            (member.monthlyContribution || 0).toFixed(2)
         );
 
         if (contributionAmount <= 0) {
@@ -373,18 +409,16 @@ const getPaymentDetails = async(req, res) => {
 
         const currentDate = new Date();
 
-        const currentMonth =
-            `${currentDate.getFullYear()}-${String(
-                currentDate.getMonth() + 1
-            ).padStart(2, "0")}`;
+        const currentMonth = `${currentDate.getFullYear()}-${String(
+            currentDate.getMonth() + 1
+        ).padStart(2, "0")}`;
 
-        const existingContribution =
-            await Contribution.findOne({
-                userId: req.user._id,
-                groupId: group._id,
-                month: currentMonth,
-                status: "paid",
-            });
+        const existingContribution = await Contribution.findOne({
+            userId: req.user._id,
+            groupId: group._id,
+            month: currentMonth,
+            status: "paid",
+        });
 
         if (existingContribution) {
             return res.status(400).json({
@@ -393,78 +427,66 @@ const getPaymentDetails = async(req, res) => {
             });
         }
 
-        const existingPendingRequest =
-            await PaymentRequest.findOne({
-                userId: req.user._id,
-                groupId: group._id,
-                month: currentMonth,
-                status: "pending",
+        const existingPendingRequest = await PaymentRequest.findOne({
+            userId: req.user._id,
+            groupId: group._id,
+            month: currentMonth,
+            status: "pending",
+        });
+
+        const ownerName = group.adminId.fullName;
+        const ownerUpiId = group.adminId.upiId;
+
+        if (!ownerUpiId) {
+            return res.status(400).json({
+                success: false,
+                message: "Group admin has not configured a UPI ID",
             });
-
-        const ownerName =
-            group.adminId.fullName;
-
-        const ownerUpiId =
-            group.adminId.upiId;
+        }
 
         const paymentLink =
             `upi://pay?pa=${encodeURIComponent(ownerUpiId)}` +
             `&pn=${encodeURIComponent(ownerName)}` +
             `&am=${contributionAmount.toFixed(2)}` +
-            `&cu=INR`;
+            `&cu=INR` +
+            `&tn=${encodeURIComponent("Contribution")}`;
 
         return res.status(200).json({
-
             success: true,
-
             message: "Payment details fetched successfully",
 
             payment: {
-
                 paymentMonth: currentMonth,
-
                 contributionAmount,
-
                 totalAmount: contributionAmount,
             },
 
             ownerPaymentDetails: {
-
                 ownerId: group.adminId._id,
-
                 ownerName,
-
                 upiId: ownerUpiId,
-
                 mobileNumber: group.adminId.mobileNumber,
-
                 profilePicture: group.adminId.profilePicture,
 
                 bankDetails: {
+                    accountHolderName: group.adminId.bankAccountDetails ? group.adminId.bankAccountDetails.accountHolderName || null : null,
 
-                    accountHolderName: group.adminId.bankDetails ? group.adminId.bankDetails.
-                    accountHolderName || null: null,
+                    bankName: group.adminId.bankAccountDetails ? group.adminId.bankAccountDetails.bankName || null : null,
 
-                    bankName: group.adminId.bankDetails ? group.adminId.bankDetails.
-                    bankName || null: null,
+                    accountNumber: group.adminId.bankAccountDetails ? group.adminId.bankAccountDetails.accountNumber || null : null,
 
-                    accountNumber: group.adminId.bankDetails ? group.adminId.bankDetails.
-                    accountNumber || null: null,
-
-                    ifscCode: group.adminId.bankDetails ? group.adminId.bankDetails.
-                    ifscCode || null: null,
-                }
+                    ifscCode: group.adminId.bankAccountDetails ? group.adminId.bankAccountDetails.ifscCode || null : null,
+                },
             },
 
             paymentLink,
 
             alreadyPaid: false,
 
-            pendingRequest:
-                !!existingPendingRequest,
+            pendingRequest: !!existingPendingRequest,
         });
-
     } catch (error) {
+        console.error(error);
 
         return res.status(500).json({
             success: false,

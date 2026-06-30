@@ -1,17 +1,9 @@
 const axios = require("axios");
 
-const geocodeAddress = async({
-    village,
-    taluka,
-    district,
-    state
-}) => {
-
+const geocodeVillage = async({ village, district, state }) => {
     try {
-
         const query = [
                 village,
-                taluka,
                 district,
                 state,
                 "India"
@@ -24,8 +16,8 @@ const geocodeAddress = async({
                 params: {
                     q: query,
                     format: "json",
-                    limit: 10,
                     addressdetails: 1,
+                    limit: 5,
                     countrycodes: "in"
                 },
                 headers: {
@@ -42,44 +34,51 @@ const geocodeAddress = async({
             };
         }
 
-        const matched = response.data.find(item => {
+        let bestMatch = null;
 
-            const address = item.address || {};
+        for (const location of response.data) {
+            if (!location.lat || !location.lon) {
+                continue;
+            }
 
-            const placeName =
-                address.village ||
-                address.town ||
-                address.city ||
-                "";
+            const address = location.address || {};
 
-            const county =
-                address.county ||
-                "";
+            const districtMatches = !district ||
+                (address.state_district &&
+                    address.state_district.toLowerCase() === district.toLowerCase()) ||
+                (address.county &&
+                    address.county.toLowerCase() === district.toLowerCase());
 
-            const stateDistrict =
-                address.state_district ||
-                "";
+            const stateMatches = !state ||
+                (address.state &&
+                    address.state.toLowerCase() === state.toLowerCase());
 
-            return (
-                placeName.toLowerCase().includes(village.toLowerCase()) &&
-                (
-                    county.toLowerCase().includes(taluka.toLowerCase()) ||
-                    stateDistrict.toLowerCase().includes(district.toLowerCase())
-                ) &&
-                address.state &&
-                address.state.toLowerCase().includes(state.toLowerCase())
+            if (districtMatches && stateMatches) {
+                bestMatch = location;
+                break;
+            }
+        }
+
+        // Fallback to first valid result
+        if (!bestMatch) {
+            bestMatch = response.data.find(
+                location => location.lat && location.lon
             );
-        });
+        }
 
-        const location = matched || response.data[0];
+        if (!bestMatch) {
+            return {
+                latitude: null,
+                longitude: null
+            };
+        }
 
         return {
-            latitude: Number(location.lat),
-            longitude: Number(location.lon)
+            latitude: Number(bestMatch.lat),
+            longitude: Number(bestMatch.lon)
         };
 
     } catch (error) {
-
         console.error("Geocoding Error:", error.message);
 
         return {
@@ -89,4 +88,4 @@ const geocodeAddress = async({
     }
 };
 
-module.exports = geocodeAddress;
+module.exports = geocodeVillage;

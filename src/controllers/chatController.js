@@ -7,7 +7,7 @@ const cloudinary =
 
 const streamifier =
     require("streamifier");
-
+// get messages after the clear time , can update it in chunks for reducing time 
 const getGroupMessages = async(req, res) => {
     try {
         const { groupCode } = req.params;
@@ -118,7 +118,7 @@ const getGroupMessages = async(req, res) => {
         });
     }
 };
-
+//stores the time when user uses clear chat and update that time
 const clearChatForMe = async(req, res) => {
     try {
         const userId = req.user._id;
@@ -159,7 +159,7 @@ const clearChatForMe = async(req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-
+//It is taking time has to reduce it 
 const uploadChatMedia = async(req, res) => {
     try {
         if (!req.file) {

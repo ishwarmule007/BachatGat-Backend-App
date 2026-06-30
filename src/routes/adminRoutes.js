@@ -12,7 +12,8 @@ const {
     removeMemberFromGroup,
     getGroupsWithMembers,
     editMemberByAdmin,
-    deleteGroupByAdmin
+    deleteGroupByAdmin,
+    updateProfile
 } = require("../controllers/adminController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -1104,5 +1105,127 @@ router.delete(
     adminMiddleware,
     removeMemberFromGroup
 );
-
+/**
+ * @swagger
+ * /api/admin/profile/update_admin:
+ *   patch:
+ *     summary: Update admin profile
+ *     description: Allows an authenticated admin to update their profile information such as name, mobile number, address, and date of birth.
+ *     tags: [Admin]
+ *
+ *     security:
+ *       - bearerAuth: []
+ *
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *
+ *               fullName:
+ *                 type: string
+ *                 example: "Priya Sharma"
+ *
+ *               mobileNumber:
+ *                 type: string
+ *                 example: "9876543210"
+ *
+ *               address:
+ *                 type: string
+ *                 example: "123, Gandhi Nagar, Pune, Maharashtra - 411001"
+ *
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *                 example: "1990-05-15"
+ *
+ *     responses:
+ *
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *
+ *                 message:
+ *                   type: string
+ *                   example: "Profile updated successfully"
+ *
+ *                 data:
+ *                   type: object
+ *
+ *       400:
+ *         description: Invalid request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   example: "At least one field is required"
+ *
+ *       401:
+ *         description: Unauthorized - Token missing or invalid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   example: "Unauthorized"
+ *
+ *       403:
+ *         description: Only admins can update this profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   example: "Access denied"
+ *
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+router.patch(
+    "/profile/update_admin",
+    authMiddleware,
+    adminMiddleware,
+    updateProfile
+);
 module.exports = router;

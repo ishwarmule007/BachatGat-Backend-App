@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Group = require('../models/Group');
+const Notification = require('../models/notification')
 const updateLanguage = async(req, res) => {
 
     try {
@@ -59,8 +60,23 @@ const getGroupMembers = async(req, res) => {
                     "failed" : member.status || "pending",
             })
         );
+        const adminUser = await User.findById(group.adminId);
+
+        if (!adminUser) {
+            return res.status(404).json({
+                success: false,
+                message: "Group admin not found"
+            });
+        }
+
+        const admin = {
+            adminId: group.adminId,
+            fullName: adminUser.fullName,
+            roleInGroup: "admin"
+        };
         res.status(200).json({
             message: "Group members fetched successfully",
+            admin,
             members
         });
     } catch (error) {
@@ -230,6 +246,7 @@ const getMyGroups = async(req, res) => {
         });
     }
 };
+// currenlty not using to be used in refreshed token , right now by frontend 
 const logoutUser = async(req, res) => {
     try {
 
@@ -279,4 +296,47 @@ const unarchiveGroup = async(req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-module.exports = { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, archiveGroup, unarchiveGroup };
+const getRecentActivity = async(req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+
+        const notifications = await Notification.find({
+                userId,
+                createdAt: { $gte: startOfToday }
+            })
+            .populate("groupId", "groupName groupCode")
+            .sort({ createdAt: -1 })
+            .limit(10);
+
+        const recentActivity = notifications.map((notification) => ({
+            notificationId: notification._id,
+            title: notification.title,
+            message: notification.message,
+            type: notification.type,
+            isRead: notification.isRead,
+
+            group: notification.groupId ? {
+                groupId: notification.groupId._id,
+                groupName: notification.groupId.groupName,
+                groupCode: notification.groupId.groupCode
+            } : null,
+
+            createdAt: notification.createdAt
+        }));
+
+        return res.status(200).json({
+            message: "Recent activity fetched successfully",
+            totalActivities: recentActivity.length,
+            recentActivity
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            message: error.message
+        });
+    }
+};
+module.exports = { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, archiveGroup, unarchiveGroup, getRecentActivity };

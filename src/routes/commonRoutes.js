@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, archiveGroup, unarchiveGroup } = require("../controllers/commonController");
+const { updateLanguage, getGroupMembers, getGroupDetails, getMyGroups, logoutUser, archiveGroup, unarchiveGroup, getRecentActivity } = require("../controllers/commonController");
 
 const authMiddleware = require("../middlewares/authMiddleware");
 
@@ -68,6 +68,18 @@ router.put(
  *                 message:
  *                   type: string
  *                   example: "Group members fetched successfully"
+ *                 admin:
+ *                   type: object
+ *                   properties:
+ *                     adminId:
+ *                       type: string
+ *                       example: "665c1f9a2b7d8f1234567890"
+ *                     fullName:
+ *                       type: string
+ *                       example: "Rahul Sharma"
+ *                     roleInGroup:
+ *                       type: string
+ *                       example: "admin"
  *                 members:
  *                   type: array
  *                   items:
@@ -97,7 +109,75 @@ router.get(
     authMiddleware,
     getGroupMembers
 );
-
+/**
+ * @swagger
+ * /api/common/recent-activity:
+ *   get:
+ *     summary: Get today's recent activity for the logged-in user
+ *     tags: [Common]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Recent activity fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Recent activity fetched successfully"
+ *                 totalActivities:
+ *                   type: number
+ *                   example: 5
+ *                 recentActivity:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       notificationId:
+ *                         type: string
+ *                         example: "665c1f9a2b7d8f1234567890"
+ *                       title:
+ *                         type: string
+ *                         example: "Payment Approved"
+ *                       message:
+ *                         type: string
+ *                         example: "Your payment of ₹500 has been approved."
+ *                       type:
+ *                         type: string
+ *                         example: "payment_accepted"
+ *                       isRead:
+ *                         type: boolean
+ *                         example: false
+ *                       group:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           groupId:
+ *                             type: string
+ *                             example: "665c1f9a2b7d8f1234567890"
+ *                           groupName:
+ *                             type: string
+ *                             example: "Friends Savings Group"
+ *                           groupCode:
+ *                             type: string
+ *                             example: "FSG-001"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2026-06-28T10:45:12.000Z"
+ *       401:
+ *         description: Unauthorized - Token missing or invalid
+ *       500:
+ *         description: Failed to fetch recent activity
+ */
+router.get(
+    "/recent-activity",
+    authMiddleware,
+    getRecentActivity
+);
 /**
  * @swagger
  * /api/common/groups/{groupCode}/details:
